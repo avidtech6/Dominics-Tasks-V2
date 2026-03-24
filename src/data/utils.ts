@@ -231,23 +231,23 @@ export function generateId(): string {
  */
 export function isToday(date: Date): boolean {
   const today = new Date();
-  return date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
+  return new Date(date).getDate() === today.getDate() &&
+    new Date(date).getMonth() === today.getMonth() &&
+    new Date(date).getFullYear() === today.getFullYear();
 }
 
 /**
  * Check if a date is in the future
  */
 export function isFuture(date: Date): boolean {
-  return date.getTime() > new Date().getTime();
+  return new Date(date).getTime() > new Date().getTime();
 }
 
 /**
  * Check if a date is overdue
  */
 export function isOverdue(date: Date): boolean {
-  return date.getTime() < new Date().getTime();
+  return new Date(date).getTime() < new Date().getTime();
 }
 
 /**
@@ -375,9 +375,9 @@ export function needsCatchUp(deadlineDate: Date | undefined): boolean {
 export function isFromYesterday(date: Date): boolean {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  return date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear();
+  return new Date(date).getDate() === yesterday.getDate() &&
+    new Date(date).getMonth() === yesterday.getMonth() &&
+    new Date(date).getFullYear() === yesterday.getFullYear();
 }
 
 /**
