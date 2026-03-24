@@ -1,0 +1,127 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isParentEmail() {
+      return request.auth.token.email in [
+        'derrickmg.admin@gmail.com',
+        'brendamgiles@gmail.com'
+      ];
+    }
+    
+    function isAuthorizedEmail() {
+      return request.auth.token.email in [
+        'dominicgiles691@gmail.com',
+        'derrickmg.admin@gmail.com',
+        'brendamgiles@gmail.com'
+      ];
+    }
+    
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidDocumentType() {
+      return request.resource.contentType.matches('(application/pdf|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document|text/plain)');
+    }
+    
+    function isValidMediaType() {
+      return request.resource.contentType.matches('(audio/.*|video/.*)');
+    }
+    
+    function isSizeUnderLimit() {
+      return request.resource.size < 10 * 1024 * 1024; // 10MB limit
+    }
+    
+    // ========================================
+    // CHAT ATTACHMENTS
+    // ========================================
+    match /chat_attachments/{userId}/{attachmentId} {
+      // Users can read their own attachments
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Users can upload attachments (with validation)
+      allow create: if isAuthenticated() && isOwner(userId)
+        && (isValidImageType() || isValidDocumentType() || isValidMediaType())
+        && isSizeUnderLimit();
+      
+      // Users can delete their own attachments
+      allow delete: if isAuthenticated() && isOwner(userId);
+      
+      // No updates allowed (upload once)
+      allow update: if false;
+    }
+    
+    // ========================================
+    // TASK EVIDENCE (Approval Evidence)
+    // ========================================
+    match /task_evidence/{familyId}/{childId}/{evidenceId} {
+      // Family members can read evidence
+      allow read: if isAuthenticated() && isOwner(familyId);
+      
+      // Family members can upload evidence for task approvals
+      allow create: if isAuthenticated() && isOwner(familyId)
+        && (isValidImageType() || isValidDocumentType())
+        && isSizeUnderLimit();
+      
+      // Only parents can delete evidence
+      allow delete: if isAuthenticated() && isParentEmail();
+      
+      // No updates allowed
+      allow update: if false;
+    }
+    
+    // ========================================
+    // PROFILE PHOTOS (Gmail sync)
+    // ========================================
+    match /profile_photos/{userId}/{photoId} {
+      // Anyone authenticated can read profile photos
+      allow read: if isAuthenticated();
+      
+      // Only the user can upload their own profile photo
+      allow create: if isAuthenticated() && isOwner(userId)
+        && isValidImageType()
+        && isSizeUnderLimit();
+      
+      // Only the user can delete their profile photo
+      allow delete: if isAuthenticated() && isOwner(userId);
+      
+      // No updates allowed
+      allow update: if false;
+    }
+    
+    // ========================================
+    // RESOURCE FILES (Educational resources)
+    // ========================================
+    match /resources/{resourceId} {
+      // Anyone authenticated can read resources
+      allow read: if isAuthenticated();
+      
+      // Only parents can upload resources
+      allow create: if isAuthenticated() && isParentEmail()
+        && (isValidDocumentType() || isValidImageType() || isValidMediaType())
+        && isSizeUnderLimit();
+      
+      // Only parents can delete resources
+      allow delete: if isAuthenticated() && isParentEmail();
+      
+      // No updates allowed
+      allow update: if false;
+    }
+    
+    // ========================================
+    // DEFAULT DENY RULE
+    // ========================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

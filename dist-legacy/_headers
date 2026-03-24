@@ -1,0 +1,15 @@
+# Cloudflare Pages Headers Configuration
+# This file configures headers for all responses
+
+# Google Sign-In OAuth headers - allows popup communication
+/*
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Cross-Origin-Embedder-Policy: unsafe-none
+
+# Cache static assets
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cache HTML - shorter TTL for updates
+*.html
+  Cache-Control: public, max-age=0, must-revalidate

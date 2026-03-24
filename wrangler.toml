@@ -1,0 +1,90 @@
+name = "dominicstasks"
+compatibility_date = "2025-01-15"
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
+
+[pages]
+production_branch = "main"
+
+# Environment-specific configurations
+[env.production]
+name = "dominicstasks-production"
+compatibility_date = "2025-01-15"
+
+[env.staging]
+name = "dominicstasks-staging"
+compatibility_date = "2025-01-15"
+
+# Functions configuration for Cloudflare Pages
+[pages.functions]
+# Add headers for Google Sign-In OAuth support
+# COOP allows popup windows to communicate with parent window
+[[pages.functions.route]]
+route = "/*"
+script = "_worker.js"
+
+# Headers configuration for security
+[headers]
+# Headers for all routes
+# Note: Using same-origin-allow-popups for OAuth Google Sign-In compatibility
+[[headers.for]]
+fetch = true
+headers = { 
+  "Cross-Origin-Opener-Policy" = "same-origin-allow-popups", 
+  "Cross-Origin-Embedder-Policy" = "unsafe-none",
+  "X-Content-Type-Options" = "nosniff",
+  "X-Frame-Options" = "DENY",
+  "Referrer-Policy" = "strict-origin-when-cross-origin"
+}
+
+# Additional security headers for specific paths
+[[headers.for]]
+path = "/"
+headers = {
+  "Cache-Control" = "public, max-age=3600",
+  "Permissions-Policy" = "camera=(), microphone=(), geolocation=()"
+}
+
+[[headers.for]]
+path = "/assets/*"
+headers = {
+  "Cache-Control" = "public, max-age=31536000, immutable"
+}
+
+# Environment variables
+[vars]
+NODE_VERSION = "18"
+VITE_APP_VERSION = "2.0.0"
+
+# Build configuration
+[build]
+command = "npm run build"
+cwd = "./"
+
+[build.upload]
+format = "directory"
+directory = "./dist"
+
+# Deployment triggers
+[triggers]
+crons = []
+
+# Analytics (if enabled)
+[analytics]
+enabled = true
+
+# Logging configuration
+[logpush]
+enabled = true
+dataset = "pages"
+
+# KV namespace bindings (if needed)
+# [[kv_namespaces]]
+# binding = "TASKS_CACHE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# D1 database bindings (if needed)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "dominicstasks-db"
+# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

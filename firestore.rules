@@ -1,0 +1,198 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isParentEmail() {
+      return request.auth.token.email in [
+        'derrickmg.admin@gmail.com',
+        'brendamgiles@gmail.com'
+      ];
+    }
+    
+    function isAuthorizedEmail() {
+      return request.auth.token.email in [
+        'dominicgiles691@gmail.com',
+        'derrickmg.admin@gmail.com',
+        'brendamgiles@gmail.com'
+      ];
+    }
+    
+    function isValidFamilySettings(settings) {
+      return settings.keys().hasAll(['parentId', 'hasPinSetup', 'familyName'])
+        && settings.parentId == request.auth.uid
+        && settings.familyName is string
+        && settings.familyName.size() > 0
+        && settings.familyName.size() <= 50;
+    }
+    
+    function isValidChildProfile(profile) {
+      return profile.keys().hasAll(['name', 'avatar', 'themeColor', 'stats', 'settings'])
+        && profile.name is string
+        && profile.name.size() > 0
+        && profile.name.size() <= 20
+        && profile.avatar is string
+        && profile.themeColor matches '#[0-9A-Fa-f]{6}'
+        && profile.stats is map
+        && profile.settings is map
+        && (profile.photoUrl == null || profile.photoUrl is string); // Optional Gmail photo URL
+    }
+    
+    function isValidApprovalLevel(level) {
+      return level in [0, 1, 2, 3];
+    }
+    
+    function isValidTask(task) {
+      return task.keys().hasAll(['title', 'status', 'section', 'taskType', 'priority', 'createdBy'])
+        && task.title is string
+        && task.title.size() > 0
+        && task.title.size() <= 200
+        && task.status in ['todo', 'today', 'done', 'pending_approval']
+        && task.section in ['morning', 'afternoon', 'assignments', 'leftovers', 'experiments', 'support', 'catchup']
+        && task.taskType in ['regular', 'assignment', 'exam', 'project', 'personal']
+        && task.priority in ['low', 'medium', 'high', 'urgent'];
+    }
+    
+    function isValidApproval(approval) {
+      return approval.keys().hasAll(['taskId', 'childId', 'status', 'level', 'taskTitle'])
+        && approval.taskId is string
+        && approval.childId is string
+        && approval.status in ['pending', 'approved', 'rejected', 'cancelled']
+        && isValidApprovalLevel(approval.level)
+        && approval.taskTitle is string;
+    }
+    
+    // ========================================
+    // USERS COLLECTION (Legacy v1 - Read Only)
+    // ========================================
+    match /users/{userId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if false; // No new writes to legacy collection
+    }
+    
+    // ========================================
+    // FAMILIES COLLECTION (v2 - Multi-Child)
+    // ========================================
+    match /families/{familyId} {
+      // Only the family owner can read/write family document
+      allow read: if isAuthenticated() && isOwner(familyId);
+      allow create: if isAuthenticated() && isOwner(familyId)
+        && request.resource.data.keys().hasAll(['settings', 'children', 'createdAt', 'updatedAt'])
+        && isValidFamilySettings(request.resource.data.settings);
+      allow update: if isAuthenticated() && isOwner(familyId);
+      allow delete: if false;
+      
+      // ========================================
+      // CHILDREN SUB-COLLECTION
+      // ========================================
+      match /children/{childId} {
+        // Family owner can fully manage children
+        allow read: if isAuthenticated() && isOwner(familyId);
+        allow write: if isAuthenticated() && isOwner(familyId)
+          && (request.resource.data.keys().hasAll(['name', 'avatar', 'themeColor', 'stats', 'settings'])
+              || request.resource.data.keys().hasAll(['name', 'avatar', 'themeColor', 'stats', 'settings', 'createdAt', 'updatedAt']));
+        
+        // ========================================
+        // TASKS SUB-COLLECTION (Per Child)
+        // ========================================
+        match /tasks/{taskId} {
+          // Tasks can be read by family members
+          allow read: if isAuthenticated() && isOwner(familyId);
+          
+          // Tasks can be created by anyone in the family
+          allow create: if isAuthenticated() && isOwner(familyId)
+            && isValidTask(request.resource.data);
+          
+          // Tasks can be updated by family owner
+          // Only allow status changes that make sense
+          allow update: if isAuthenticated() && isOwner(familyId)
+            && (
+              // Allow any update to task fields
+              true
+            );
+          
+          allow delete: if isAuthenticated() && isOwner(familyId);
+          
+          // ========================================
+          // COMMENTS SUB-SUB-COLLECTION (Per Task)
+          // ========================================
+          match /comments/{commentId} {
+            allow read: if isAuthenticated() && isOwner(familyId);
+            allow write: if isAuthenticated() && isOwner(familyId)
+              && request.resource.data.keys().hasAll(['text', 'authorId', 'authorName', 'timestamp']);
+          }
+        }
+      }
+      
+      // ========================================
+      // APPROVALS SUB-COLLECTION (Family-level)
+      // ========================================
+      match /approvals/{approvalId} {
+        // Approvals can be read by family members
+        allow read: if isAuthenticated() && isOwner(familyId);
+        
+        // Approvals can be created when completing tasks
+        allow create: if isAuthenticated() && isOwner(familyId)
+          && isValidApproval(request.resource.data);
+        
+        // Only parents can approve/reject (status changes)
+        allow update: if isAuthenticated() && isOwner(familyId)
+          && (
+            // Only allow status and parent-related fields to change
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'parentNote', 'reviewedBy', 'reviewedAt', 'evidenceUrl', 'evidenceType', 'updatedAt'])
+            || (
+              // Also allow updating task reference info
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taskId', 'childId', 'status', 'level', 'taskTitle', 'taskPoints', 'childName', 'parentNote', 'reviewedBy', 'reviewedAt', 'evidenceUrl', 'evidenceType', 'updatedAt'])
+            )
+          );
+        
+        allow delete: if false; // Never delete approvals for audit trail
+      }
+    }
+    
+    // ========================================
+    // FAMILY_MESSAGES COLLECTION (Chat)
+    // ========================================
+    match /family_messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasAll(['text', 'senderId', 'senderName', 'timestamp', 'type'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 2000;
+      allow update: if isAuthenticated() && isOwner(request.resource.data.senderId);
+      allow delete: if isAuthenticated() && isOwner(request.resource.data.senderId);
+    }
+    
+    // ========================================
+    // RESOURCES COLLECTION
+    // ========================================
+    match /resources/{resourceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isParentEmail();
+    }
+    
+    // ========================================
+    // ACHIEVEMENTS TRACKING
+    // ========================================
+    match /achievements/{achievementId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isParentEmail();
+    }
+    
+    // ========================================
+    // POINTS HISTORY
+    // ========================================
+    match /points_history/{recordId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isParentEmail();
+    }
+  }
+}

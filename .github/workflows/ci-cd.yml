@@ -1,0 +1,223 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  NODE_VERSION: '18'
+  PLAYWRIGHT_VERSION: '1.57.0'
+
+jobs:
+  lint-and-type-check:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'dominicstasks/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./dominicstasks
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+        working-directory: ./dominicstasks
+
+      - name: Check for linting issues
+        run: |
+          # Simple linting checks
+          echo "Checking for console.log statements..."
+          if grep -r "console\.log" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" ./dominicstasks/src; then
+            echo "Warning: console.log statements found in source code"
+          fi
+          
+          echo "Checking for TODO comments..."
+          if grep -r "TODO\|FIXME\|HACK" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" ./dominicstasks/src; then
+            echo "Warning: TODO/FIXME/HACK comments found"
+          fi
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-type-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'dominicstasks/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./dominicstasks
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: ./dominicstasks
+
+      - name: Run Playwright tests
+        run: npm test
+        working-directory: ./dominicstasks
+        env:
+          CI: true
+          VITE_DEV_MODE: 'true' # Run tests in dev mode
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: dominicstasks/test-results/
+          retention-days: 7
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'dominicstasks/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./dominicstasks
+
+      - name: Build application
+        run: npm run build
+        working-directory: ./dominicstasks
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          ls -la ./dominicstasks/dist/
+          echo "Checking for index.html..."
+          [ -f ./dominicstasks/dist/index.html ] && echo "✓ index.html exists" || echo "✗ index.html missing"
+          echo "Checking for assets..."
+          [ -d ./dominicstasks/dist/assets ] && echo "✓ assets directory exists" || echo "✗ assets directory missing"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: dominicstasks/dist/
+          retention-days: 7
+
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: dominicstasks/dist
+
+      - name: Deploy to Cloudflare Pages (Preview)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: 'dominicstasks'
+          directory: 'dominicstasks/dist'
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref }}
+          wranglerVersion: '3'
+
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: dominicstasks/dist
+
+      - name: Deploy to Cloudflare Pages (Production)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: 'dominicstasks'
+          directory: 'dominicstasks/dist'
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: 'main'
+          wranglerVersion: '3'
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run security checks
+        run: |
+          echo "Running security checks..."
+          
+          # Check for exposed secrets in code
+          echo "Checking for potential secrets..."
+          if grep -r -i "api_key\|api_key\|secret\|password\|token" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --exclude-dir=node_modules ./dominicstasks/src | grep -v "VITE_" | grep -v "process.env" | grep -v "import.meta.env"; then
+            echo "Warning: Potential secrets found in source code"
+          fi
+          
+          # Check Firebase security rules
+          echo "Checking Firebase security rules..."
+          if [ -f ./dominicstasks/firestore.rules ]; then
+            echo "✓ Firestore rules file exists"
+          fi
+          
+          if [ -f ./dominicstasks/storage.rules ]; then
+            echo "✓ Storage rules file exists"
+          fi
+          
+          # Check CSP headers
+          echo "Checking CSP headers..."
+          if [ -f ./dominicstasks/public/_headers ]; then
+            if grep -q "Content-Security-Policy" ./dominicstasks/public/_headers; then
+              echo "✓ CSP header found in _headers"
+            else
+              echo "Warning: CSP header not found in _headers"
+            fi
+          fi

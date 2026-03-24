@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dominic's Tasks</title>
+    <meta name="description" content="Gamified task management for Dominic and family coordination hub" />
+    <!-- Aggressive cache-busting for mobile OAuth redirect -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <!-- CRITICAL: Synchronous script to handle OAuth redirect before React loads -->
+    <!-- This runs even if page is restored from BFCache -->
+    <script>
+      (function() {
+        var search = window.location.search;
+
+        // Check for OAuth-related parameters
+        var hasOAuthParams = search.indexOf('code=') !== -1 ||
+                             search.indexOf('state=') !== -1 ||
+                             search.indexOf('error=') !== -1 ||
+                             search.indexOf('utm_source=') !== -1;
+
+        // Also check sessionStorage flag (set before redirect)
+        var returningFromAuth = sessionStorage.getItem('returningFromAuth') === 'true';
+
+        if (hasOAuthParams || returningFromAuth) {
+          // Clear the flag
+          sessionStorage.removeItem('returningFromAuth');
+
+          // Log for debugging
+          var reason = hasOAuthParams ? 'URL params: ' + search.substring(0, 50) : 'sessionStorage flag';
+          console.log('[OAuth-Intercept] Detected return from auth, reason: ' + reason);
+
+          // Show "Authenticating..." message
+          document.body.innerHTML = '<div style="padding:20px;font-family:sans-serif;text-align:center;"><h3>Authenticating...</h3><p>Please wait while we complete the login process.</p></div>';
+
+          // Force hard reload after a tiny delay
+          setTimeout(function() {
+            window.location.replace(window.location.pathname);
+          }, 100);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
