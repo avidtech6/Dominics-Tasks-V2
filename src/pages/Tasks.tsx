@@ -224,10 +224,10 @@ const Tasks: React.FC = () => {
   const afternoonTasks = todayTasks.filter((t) => t.section === 'afternoon');
 
   // NEW: Catch Up section - tasks that need to be shored up from yesterday or before
-  const catchUpTasks = allTasks.filter((t) => 
-    t.status !== 'done' && 
+  const catchUpTasks = allTasks.filter((t) =>
+    t.status !== 'done' &&
     !t.deletedAt &&
-    (needsCatchUp(t) || isFromYesterday(t))
+    (needsCatchUp(t.deadlineDate) || isFromYesterday(t.dueDate || t.createdAt))
   );
 
   // NEW: Get mirrored tasks from right column sections that have today's date
@@ -623,7 +623,7 @@ const Tasks: React.FC = () => {
       <div className="text-center mb-8">
         <h1 className="text-[2.2rem] font-bold text-[#2d3748] mb-2">Dominic's Tasks</h1>
         <p className="text-[#718096] text-base">Take it one step at a time!</p>
-        <div className="date-badge">{formatDate()}</div>
+        <div className="date-badge">{formatDate(new Date())}</div>
       </div>
 
       {/* Navigation Tabs */}
