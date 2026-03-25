@@ -135,7 +135,20 @@ async function launch() {
 
     // Open browser
     console.log(`🌐 Opening browser to http://localhost:${detectedPort}...`);
-    await open(`http://localhost:${detectedPort}`);
+    // Use platform-specific browser opening
+    const { platform } = process;
+    if (platform === 'win32') {
+      // Windows - use start command
+      const { spawn } = require('child_process');
+      spawn('start', ['http://localhost:' + detectedPort], { shell: true });
+    } else if (platform === 'darwin') {
+      // macOS - use open command
+      const { spawn } = require('child_process');
+      spawn('open', ['http://localhost:' + detectedPort]);
+    } else {
+      // Linux and others - use open package
+      await open(`http://localhost:${detectedPort}`);
+    }
 
     console.log('==============================================');
     console.log('🎉 Development server is running!');
