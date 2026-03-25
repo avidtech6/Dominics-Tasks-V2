@@ -139,11 +139,11 @@ async function launch() {
     const { platform } = process;
     if (platform === 'win32') {
       // Windows - use start command
-      const { spawn } = require('child_process');
+      const { spawn } = await import('child_process');
       spawn('start', ['http://localhost:' + detectedPort], { shell: true });
     } else if (platform === 'darwin') {
       // macOS - use open command
-      const { spawn } = require('child_process');
+      const { spawn } = await import('child_process');
       spawn('open', ['http://localhost:' + detectedPort]);
     } else {
       // Linux and others - use open package
