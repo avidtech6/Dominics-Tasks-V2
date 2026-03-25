@@ -219,9 +219,17 @@ const Tasks: React.FC = () => {
   const todayTasks = allTasks.filter((t) => t.status === 'today' || t.status === 'done');
   const todoTasks = allTasks.filter((t) => t.status === 'todo' || t.status === 'done');
 
-  // Active tasks (not done)
+  // Active tasks (not done) - include both 'today' and 'todo' status for morning/afternoon sections
   const morningTasks = todayTasks.filter((t) => t.section === 'morning');
   const afternoonTasks = todayTasks.filter((t) => t.section === 'afternoon');
+  
+  // Also include todo tasks in morning/afternoon sections
+  const morningTodoTasks = allTasks.filter((t) => t.section === 'morning' && t.status === 'todo');
+  const afternoonTodoTasks = allTasks.filter((t) => t.section === 'afternoon' && t.status === 'todo');
+  
+  // Combine today and todo tasks for morning/afternoon sections
+  const combinedMorningTasks = [...morningTasks, ...morningTodoTasks];
+  const combinedAfternoonTasks = [...afternoonTasks, ...afternoonTodoTasks];
 
   // NEW: Catch Up section - tasks that need to be shored up from yesterday or before
   const catchUpTasks = allTasks.filter((t) =>
@@ -740,7 +748,7 @@ const Tasks: React.FC = () => {
                 subtitle="Priority Focus"
                 icon={getSectionIcon('morning')}
                 iconClass="section-icon-morning"
-                tasks={morningTasks}
+                tasks={combinedMorningTasks}
                 showWhenEmpty={true}
               />
               
@@ -749,7 +757,7 @@ const Tasks: React.FC = () => {
                 subtitle="Keep going!"
                 icon={getSectionIcon('afternoon')}
                 iconClass="section-icon-afternoon"
-                tasks={afternoonTasks}
+                tasks={combinedAfternoonTasks}
                 showWhenEmpty={true}
               />
               

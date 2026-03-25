@@ -17,6 +17,8 @@ import {
   Settings,
   ArrowRight,
   Users,
+  MessageSquare,
+  History,
 } from 'lucide-react';
 import {
   isParentUser,
@@ -363,19 +365,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   
   // Navigation items based on user role and mode
   const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/tasks', icon: BookOpen, label: 'Tasks' },
-    { to: '/rewards', icon: Trophy, label: 'Rewards' },
+    { to: '/calendar', icon: Calendar, label: 'Calendar' },
+    { to: '/chat', icon: MessageCircle, label: 'Chat' },
+    { to: '/resources', icon: FolderOpen, label: 'Resources' },
+    { to: '/history', icon: History, label: 'History' },
     { to: '/achievements', icon: Users, label: 'Achievements' },
-    { to: '/comments', icon: MessageCircle, label: 'Comments' },
-    { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   ];
   
   // Additional items for parent mode
   const parentNavItems = [
-    { to: '/family-setup', icon: Users, label: 'Family Setup' },
-    { to: '/parent-dashboard', icon: LayoutDashboard, label: 'Parent Dashboard' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
+    { to: '/parent-chat', icon: MessageCircle, label: 'Parent Chat' },
+    { to: '/admin', icon: LayoutDashboard, label: 'Parent Dashboard' },
+    { to: '/task-comment/:taskId', icon: MessageSquare, label: 'Task Comments' },
   ];
   
   const allNavItems = isParentMode ? [...navItems, ...parentNavItems] : navItems;
