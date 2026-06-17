@@ -7,11 +7,12 @@
 import { spawn } from 'child_process';
 import open from 'open';
 import http from 'http';
+import { exec } from 'child_process';
 
 // Configuration
-const SERVER_TIMEOUT = 30000; // 30 seconds
-const POLL_INTERVAL = 500; // 0.5 seconds
-const FALLBACK_PORTS = [5173, 5174, 5175];
+const SERVER_TIMEOUT = 45000; // 45 seconds
+const POLL_INTERVAL = 300; // 0.3 seconds
+const FALLBACK_PORTS = [5176, 5174, 5173, 5175, 5177, 5178, 5179];
 
 /**
  * Wait for the development server to be ready
@@ -27,12 +28,20 @@ function waitForServerReady(port, timeout) {
         return;
       }
 
-      const req = http.get(`http://localhost:${port}`, () => {
-        resolve(); // ANY response means server is up
+      const req = http.get(`http://localhost:${port}`, (res) => {
+        // Vite returns 404 until the client loads, but that's okay
+        // Any response means the server is listening
+        resolve();
       });
 
-      req.on('error', () => {
-        setTimeout(check, POLL_INTERVAL);
+      req.on('error', (err) => {
+        // Connection refused means server isn't up yet
+        if (err.code === 'ECONNREFUSED') {
+          setTimeout(check, POLL_INTERVAL);
+        } else {
+          // Other errors might indicate server is up but client not ready
+          resolve();
+        }
       });
 
       req.setTimeout(POLL_INTERVAL, () => {
@@ -49,14 +58,95 @@ function waitForServerReady(port, timeout) {
  * Extract port from stdout
  */
 function extractPortFromLine(line) {
-  const match = line.match(/http:\/\/localhost:(\d+)/);
-  return match ? parseInt(match[1]) : null;
+  // Look for various patterns that might contain the port
+  const patterns = [
+    /➜\s+Local:\s+http:\/\/localhost:(\d+)/,
+    /Local:\s+http:\/\/localhost:(\d+)/,
+    /Network:\s+http:\/\/localhost:(\d+)/,
+    /Dominic's Tasks.*?http:\/\/localhost:(\d+)/,
+    /Development server.*?http:\/\/localhost:(\d+)/,
+    /Vite.*?http:\/\/localhost:(\d+)/,
+    /Local:\s+http:\/\/127\.0\.0\.1:(\d+)/,
+    /Network:\s+http:\/\/127\.0\.0\.1:(\d+)/,
+    /http:\/\/localhost:(\d+)/,
+    /port\s+(\d+)/,
+    /:(\d+)\//
+  ];
+  
+  for (const pattern of patterns) {
+    const match = line.match(pattern);
+    if (match) {
+      const port = parseInt(match[1]);
+      if (port >= 1024 && port <= 65535) { // Valid port range
+        console.log(`🎯 Port detected using pattern: ${pattern.source}`);
+        return port;
+      }
+    }
+  }
+  
+  return null;
 }
 
 /**
  * Probe fallback ports
  */
+async function killProcessesOnPort(port) {
+  return new Promise((resolve) => {
+    const command = process.platform === 'win32'
+      ? `netstat -ano | findstr :${port}`
+      : `lsof -ti:${port}`;
+    
+    exec(command, (error, stdout, stderr) => {
+      if (error || !stdout) {
+        console.log(`🔍 No processes found on port ${port}`);
+        resolve();
+        return;
+      }
+      
+      const pids = process.platform === 'win32'
+        ? stdout.trim().split('\n').map(line => line.trim().split(/\s+/).pop()).filter(pid => pid)
+        : stdout.trim().split('\n').filter(pid => pid);
+      
+      if (pids.length === 0) {
+        console.log(`🔍 No processes found on port ${port}`);
+        resolve();
+        return;
+      }
+      
+      console.log(`🗑️  Found ${pids.length} process(es) on port ${port}: ${pids.join(', ')}`);
+      
+      pids.forEach(pid => {
+        const killCommand = process.platform === 'win32'
+          ? `taskkill /F /PID ${pid}`
+          : `kill -9 ${pid}`;
+        
+        exec(killCommand, (killError) => {
+          if (killError) {
+            console.log(`⚠️  Failed to kill process ${pid}: ${killError.message}`);
+          } else {
+            console.log(`✅ Successfully killed process ${pid}`);
+          }
+        });
+      });
+      
+      // Give processes time to terminate
+      setTimeout(resolve, 1000);
+    });
+  });
+}
+
 async function probeFallbackPorts() {
+  console.log('🔍 Probing fallback ports for existing dev servers...');
+  
+  // First, try to kill any existing processes on fallback ports
+  for (const port of FALLBACK_PORTS) {
+    await killProcessesOnPort(port);
+  }
+  
+  // Wait a moment for processes to fully terminate
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Now check if any ports are still in use
   for (const port of FALLBACK_PORTS) {
     console.log(`🔍 Probing port ${port}...`);
     const isOpen = await new Promise((resolve) => {
@@ -113,14 +203,37 @@ async function launch() {
       console.error(`❌ STDERR: ${data.toString().trim()}`);
     });
 
-    // Wait 3 seconds for stdout detection
+    // Wait 5 seconds for stdout detection
     console.log('⏳ Waiting for port detection...');
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    console.log('   (This allows Vite time to start and display the port information)');
+    await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // If no port detected, probe fallback ports
     if (!detectedPort) {
       console.log('⚠️ No port detected from stdout. Probing fallback ports...');
       detectedPort = await probeFallbackPorts();
+      
+      // If still no port found, probe a broader range of ports
+      if (!detectedPort) {
+        console.log('🔍 Probing broader port range (5180-5190)...');
+        for (let port = 5180; port <= 5190; port++) {
+          console.log(`🔍 Probing port ${port}...`);
+          const isOpen = await new Promise((resolve) => {
+            const req = http.get(`http://localhost:${port}`, () => resolve(true));
+            req.on('error', () => resolve(false));
+            req.setTimeout(300, () => {
+              req.destroy();
+              resolve(false);
+            });
+          });
+
+          if (isOpen) {
+            console.log(`✅ Found server on port ${port}`);
+            detectedPort = port;
+            break;
+          }
+        }
+      }
     }
 
     // If still no port, fail

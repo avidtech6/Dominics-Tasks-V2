@@ -23,4 +23,14 @@ export class AuthBehaviour {
       updatedAt: new Date(),
     };
   }
+
+  async exitParentMode(): Promise<void> {
+    // Placeholder implementation
+    console.log('Exiting parent mode');
+  }
+
+  async setupParentPin(pin: string): Promise<void> {
+    // Placeholder implementation
+    console.log('Setting up parent pin:', pin);
+  }
 }

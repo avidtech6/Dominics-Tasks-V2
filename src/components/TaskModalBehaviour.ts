@@ -104,3 +104,31 @@ export const hasRequiredFields = (task: {
     task.section
   );
 };
+
+/**
+ * Get default values for task creation based on task type
+ * @param taskType - The type of task being created
+ * @returns Object containing default values for due date and section
+ */
+export const getDefaultValuesForTaskType = (taskType: TaskType): { 
+  dueDate?: string; 
+  section: TaskSection 
+} => {
+  // For assignment tasks, set specific defaults
+  if (taskType === 'assignment') {
+    // Set due date to tomorrow at 9:00 AM
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    
+    return {
+      dueDate: tomorrow.toISOString(),
+      section: 'assignments'
+    };
+  }
+
+  // For all other task types, keep existing behavior (no specific defaults)
+  return {
+    section: 'morning' // Default section for other task types
+  };
+};

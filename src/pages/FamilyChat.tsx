@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useBehaviours } from '../orchestrator/AppOrchestrator';
-import { Message, Attachment } from '../types';
+import { Message, Attachment } from '../data/types';
 import { format } from 'date-fns';
 import {
   Paperclip, Smile, MessageCircle,

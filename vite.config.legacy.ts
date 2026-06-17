@@ -1,14 +1,13 @@
-import { defineConfig } from 'vite'
+ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// Legacy v1.0 Build Configuration
-// This configuration builds the legacy single-user version
+// Legacy build configuration
 // Run with: npm run build:legacy
-
 export default defineConfig({
   plugins: [
     react({
+      // Don't add nonces to scripts for CSP compatibility
       cspConfig: false,
     }),
   ],
@@ -21,17 +20,16 @@ export default defineConfig({
     outDir: 'dist-legacy',
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.legacy.html'),
-      },
-      output: {
-        entryFileNames: 'assets/index-[hash].js',
-        chunkFileNames: 'assets/index-[hash].js',
-        assetFileNames: 'assets/index-[hash].[ext]',
+        main: path.resolve(__dirname, 'src/main.legacy.tsx'),
       },
     },
   },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
   server: {
     headers: {
+      // COOP and COEP headers for OAuth popup support
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
     },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Resource } from '../types';
+import { Resource, User } from '../data/types';
 import { format } from 'date-fns';
 import { FolderOpen, Plus, ExternalLink, Trash2, Printer, FileText, FileSpreadsheet, File } from 'lucide-react';
 import { useBehaviours } from '../orchestrator/AppOrchestrator';
@@ -21,12 +21,29 @@ const getFileIcon = (fileType: string) => {
 
 const Resources: React.FC = () => {
   const { authBehaviour } = useBehaviours();
-  const user = authBehaviour.getUser();
+  const [user, setUser] = useState<User | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newUrl, setNewUrl] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newContent, setNewContent] = useState('');
+  const [newType, setNewType] = useState<'article' | 'video' | 'tool' | 'template'>('article');
+  const [newCategory, setNewCategory] = useState('');
+  const [newTags, setNewTags] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
+
+  // Load current user
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const currentUser = await authBehaviour.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    };
+    loadUser();
+  }, [authBehaviour]);
 
   // Load resources for development
   useEffect(() => {
@@ -35,48 +52,47 @@ const Resources: React.FC = () => {
       {
         id: '1',
         title: 'Math Homework Guidelines',
-        driveUrl: 'https://example.com/math-homework',
-        fileType: 'pdf',
-        addedBy: 'dev@parent.com',
-        addedByName: 'Dev User',
-        addedAt: new Date('2024-01-15'),
+        description: 'Guidelines for math homework assignments',
+        content: 'Detailed guidelines for completing math homework assignments...',
+        type: 'article',
+        category: 'Mathematics',
+        tags: ['homework', 'math'],
+        createdAt: new Date('2024-01-15'),
+        updatedAt: new Date('2024-01-15'),
       },
       {
         id: '2',
         title: 'Science Project Instructions',
-        driveUrl: 'https://example.com/science-project',
-        fileType: 'doc',
-        addedBy: 'dev@parent.com',
-        addedByName: 'Dev User',
-        addedAt: new Date('2024-01-10'),
+        description: 'Instructions for science fair projects',
+        content: 'Step-by-step instructions for creating science fair projects...',
+        type: 'tool',
+        category: 'Science',
+        tags: ['project', 'science'],
+        createdAt: new Date('2024-01-10'),
+        updatedAt: new Date('2024-01-10'),
       },
       {
         id: '3',
         title: 'Reading List',
-        driveUrl: 'https://example.com/reading-list',
-        fileType: 'sheet',
-        addedBy: 'dev@parent.com',
-        addedByName: 'Dev User',
-        addedAt: new Date('2024-01-05'),
+        description: 'Recommended reading materials',
+        content: 'List of recommended books and reading materials...',
+        type: 'article',
+        category: 'Language Arts',
+        tags: ['reading', 'literature'],
+        createdAt: new Date('2024-01-05'),
+        updatedAt: new Date('2024-01-05'),
       },
     ];
     setResources(mockResources.sort((a: Resource, b: Resource) =>
-      new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     ));
   }, []);
 
-  const detectFileType = (url: string): string => {
-    const extension = url.split('.').pop()?.toLowerCase();
-    if (['pdf'].includes(extension || '')) return 'pdf';
-    if (['doc', 'docx'].includes(extension || '')) return 'doc';
-    if (['xlsx', 'xls'].includes(extension || '')) return 'sheet';
-    return 'other';
-  };
 
   const handleAddResource = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newTitle.trim() || !newUrl.trim() || !user) return;
+    if (!newTitle.trim() || !user) return;
 
     setAdding(true);
 
@@ -84,16 +100,22 @@ const Resources: React.FC = () => {
       const newResource: Resource = {
         id: Date.now().toString(),
         title: newTitle.trim(),
-        driveUrl: newUrl.trim(),
-        fileType: detectFileType(newUrl.trim()),
-        addedBy: user.email,
-        addedByName: user.displayName,
-        addedAt: new Date(),
+        description: newDescription.trim(),
+        content: newContent.trim(),
+        type: newType,
+        category: newCategory.trim(),
+        tags: newTags,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       setResources(prev => [newResource, ...prev]);
       setNewTitle('');
-      setNewUrl('');
+      setNewDescription('');
+      setNewContent('');
+      setNewType('article');
+      setNewCategory('');
+      setNewTags([]);
       setShowAddModal(false);
     } catch (error) {
       console.error('Error adding resource:', error);
@@ -108,14 +130,8 @@ const Resources: React.FC = () => {
     }
   };
 
-  const handleOpen = (url: string) => {
-    window.open(url, '_blank');
-  };
-
-  const handlePrint = (url: string) => {
-    // Open Google Drive's print feature
-    const printUrl = url.replace('/edit', '/preview');
-    window.open(printUrl, '_blank');
+  const handleOpen = (content: string) => {
+    window.open(content, '_blank');
   };
 
   return (
@@ -129,7 +145,7 @@ const Resources: React.FC = () => {
           </h1>
           <p className="text-gray-500">Educational materials and documents</p>
         </div>
-        {isParent && (
+        {user?.role === 'parent' && (
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center space-x-2 bg-amber-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-amber-600 transition-colors shadow-lg shadow-amber-500/30"
@@ -158,31 +174,40 @@ const Resources: React.FC = () => {
             >
               <div className="flex items-start space-x-4">
                 <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  {getFileIcon(resource.fileType)}
+                  <FileText className="text-blue-500" size={24} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-800 mb-1 truncate">
                     {resource.title}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-3">
-                    Added {format(new Date(resource.addedAt), 'MMM d, yyyy')}
+                  <p className="text-sm text-gray-500 mb-2">
+                    {resource.description}
+                  </p>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      {resource.type}
+                    </span>
+                    <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                      {resource.category}
+                    </span>
+                    {resource.tags.map((tag, index) => (
+                      <span key={index} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Created {format(new Date(resource.createdAt), 'MMM d, yyyy')}
                   </p>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => handleOpen(resource.driveUrl)}
+                      onClick={() => handleOpen(resource.content)}
                       className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
                     >
                       <ExternalLink size={14} />
-                      <span>Open</span>
+                      <span>View</span>
                     </button>
-                    <button
-                      onClick={() => handlePrint(resource.driveUrl)}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="Print via Google Drive"
-                    >
-                      <Printer size={16} />
-                    </button>
-                    {isParent && (
+                    {user?.role === 'parent' && (
                       <button
                         onClick={() => handleDelete(resource.id)}
                         className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -229,15 +254,69 @@ const Resources: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Google Drive Link
+                  Description
                 </label>
                 <input
-                  type="url"
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  placeholder="https://drive.google.com/..."
+                  type="text"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="Brief description of the resource"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Content
+                </label>
+                <textarea
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  placeholder="Resource content or link"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type
+                </label>
+                <select
+                  value={newType}
+                  onChange={(e) => setNewType(e.target.value as any)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="article">Article</option>
+                  <option value="video">Video</option>
+                  <option value="tool">Tool</option>
+                  <option value="template">Template</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  placeholder="e.g., Mathematics, Science"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={newTags.join(', ')}
+                  onChange={(e) => setNewTags(e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
+                  placeholder="e.g., homework, math, assignment"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 

@@ -10,6 +10,7 @@ import {
   getMirroredTasksForToday,
   formatSmartDate
 } from '../data/utils';
+import { getDefaultValuesForTaskType } from '../components/TaskModalBehaviour';
 
 type TabType = 'tasks' | 'history' | 'deleted' | 'profile';
 
@@ -63,6 +64,26 @@ const Tasks: React.FC = () => {
   const [loadingComments, setLoadingComments] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
   const [newComment, setNewComment] = useState('');
+
+  // Handle task type change to update default values
+  const handleTaskTypeChange = (newTaskType: TaskType) => {
+    setFormTaskType(newTaskType);
+    
+    // Get default values for this task type
+    const defaults = getDefaultValuesForTaskType(newTaskType);
+    
+    // Update section if it's an assignment task
+    if (defaults.section) {
+      setFormSection(defaults.section);
+    }
+    
+    // Update due date if it's an assignment task
+    if (defaults.dueDate) {
+      // Format date for input (YYYY-MM-DD)
+      const formattedDate = new Date(defaults.dueDate).toISOString().split('T')[0];
+      setFormDueDate(formattedDate);
+    }
+  };
 
   // Form handlers
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -902,7 +923,7 @@ const Tasks: React.FC = () => {
           // Form handlers
           onTitleChange={setFormTitle}
           onDescriptionChange={setFormDescription}
-          onTaskTypeChange={setFormTaskType}
+          onTaskTypeChange={handleTaskTypeChange}
           onPriorityChange={setFormPriority}
           onSectionChange={setFormSection}
           onDueDateChange={setFormDueDate}

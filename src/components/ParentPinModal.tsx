@@ -33,10 +33,8 @@ const ParentPinModal: React.FC<ParentPinModalProps> = ({
   isLoading,
   setIsLoading
 }) => {
-  // Early return in development mode
-  if (import.meta.env.DEV) {
-    return null;
-  }
+  // PIN gate disabled — old project, owner needs to get in
+  return null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

@@ -47,29 +47,27 @@ const ParentChat: React.FC = () => {
       // Google APIs not available
     });
   }, []);
+  // Load messages from behavior
   useEffect(() => {
-    // Load messages from behavior
-    useEffect(() => {
-      const loadMessages = async () => {
-        try {
-          const messagesData = chatBehaviour.getMessagesSync();
-          // Convert Message to PrivateMessage for compatibility
-          const privateMessages: PrivateMessage[] = messagesData.map(msg => ({
-            ...msg,
-            conversationId: 'parent', // Default conversation ID
-            readBy: [msg.senderId] // Default read by sender
-          }));
-          setMessages(privateMessages);
-        } catch (error) {
-          console.error('Failed to load messages:', error);
-          // Fallback to empty array
-          setMessages([]);
-        }
-      };
-      
-      loadMessages();
-    }, [chatBehaviour]);
-  }, []);
+    const loadMessages = async () => {
+      try {
+        const messagesData = chatBehaviour.getMessagesSync();
+        // Convert Message to PrivateMessage for compatibility
+        const privateMessages: PrivateMessage[] = messagesData.map(msg => ({
+          ...msg,
+          conversationId: 'parent', // Default conversation ID
+          readBy: [msg.senderId] // Default read by sender
+        }));
+        setMessages(privateMessages);
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+        // Fallback to empty array
+        setMessages([]);
+      }
+    };
+    
+    loadMessages();
+  }, [chatBehaviour]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {

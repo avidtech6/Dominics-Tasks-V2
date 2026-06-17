@@ -79,4 +79,36 @@ export class TaskBehaviour {
     return this.tasks.filter(t => t.section === 'assignments' || t.section === 'leftovers')
       .map(t => ({ ...t, isMirrored: true, originalTaskId: t.id }));
   }
+
+  // Task approval methods
+  async getPendingApprovals(): Promise<any[]> {
+    // For now, return an empty array as placeholder
+    // This could be extended to track actual task approvals
+    return [];
+  }
+
+  async approveTaskCompletion(approvalId: string): Promise<void> {
+    // Placeholder implementation
+    console.log(`Approving task completion for: ${approvalId}`);
+  }
+
+  async rejectTaskCompletion(approvalId: string, reason?: string): Promise<void> {
+    // Placeholder implementation
+    console.log(`Rejecting task completion for: ${approvalId}`, reason);
+  }
+
+  async restoreDeletedTasks(): Promise<number> {
+    // Placeholder implementation - restore tasks with 'cancelled' status
+    const cancelledTasks = this.tasks.filter(t => t.status === 'cancelled');
+    cancelledTasks.forEach(task => {
+      task.status = 'pending' as TaskStatus;
+      task.updatedAt = new Date();
+    });
+    this.notify({ type: 'tasks_restored', tasks: cancelledTasks });
+    return cancelledTasks.length;
+  }
+
+  getDeletedTasks(): Task[] {
+    return this.tasks.filter(t => t.status === 'cancelled');
+  }
 }

@@ -1,0 +1,75 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build output
+dist/
+dist-legacy/
+build/
+out/
+src/dist/
+src/legacy-backup-2026-2/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+vite.log
+debug.log
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+desktop.ini
+
+# Test output
+playwright-report/
+test-results/
+coverage/
+.nyc_output/
+
+# Screenshots / debug artifacts
+screenshots/
+*.png
+
+# One-shot scripts
+capture-screenshots.mjs
+capture-chat.mjs
+playwright-navigate.json
+
+# Wrangler / build cache
+.wrangler/
+.vercel/
+.netlify/
+
+# Cache
+.cache/
+.eslintcache
+.parcel-cache/
+
+# OS junk
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Misc
+*.tsbuildinfo
+*.pid
+*.pid.lock
+*.seed
+*.pid

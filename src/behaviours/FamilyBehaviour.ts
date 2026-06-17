@@ -40,4 +40,49 @@ export class FamilyBehaviour {
       updatedAt: new Date(),
     };
   }
+
+  // Family management methods
+  async loadFamily(): Promise<Family> {
+    return this.getFamily();
+  }
+
+  async createChildProfile(name: string, avatar: string, color: string): Promise<Profile> {
+    const newProfile: Profile = {
+      id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      avatar,
+      color,
+      userId: 'child_default',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    this.profiles.push(newProfile);
+    this.family.childIds.push(newProfile.id);
+    this.notify({ type: 'child_created', profile: newProfile });
+    
+    return newProfile;
+  }
+
+  async deleteChildProfile(childId: string): Promise<void> {
+    const index = this.profiles.findIndex(p => p.id === childId);
+    if (index === -1) {
+      throw new Error(`Profile ${childId} not found`);
+    }
+    
+    const deletedProfile = this.profiles[index];
+    this.profiles.splice(index, 1);
+    this.family.childIds = this.family.childIds.filter(id => id !== childId);
+    
+    this.notify({ type: 'child_deleted', profile: deletedProfile });
+  }
+
+  async updateParentSettings(settings: any): Promise<void> {
+    this.family = {
+      ...this.family,
+      ...settings,
+      updatedAt: new Date(),
+    };
+    this.notify({ type: 'family_updated', family: this.family });
+  }
 }

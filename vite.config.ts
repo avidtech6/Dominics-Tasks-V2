@@ -39,24 +39,3 @@ export default defineConfig({
     },
   },
 })
-
-// Legacy build configuration
-// Run with: npm run build:legacy
-import { mergeConfig } from 'vite'
-import baseConfig from './vite.config'
-
-const legacyConfig = mergeConfig(baseConfig, {
-  build: {
-    outDir: 'dist-legacy',
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'src/main.legacy.tsx'),
-      },
-    },
-  },
-  define: {
-    'process.env.NODE_ENV': '"production"',
-  },
-})
-
-export const legacyBuildConfig = legacyConfig
