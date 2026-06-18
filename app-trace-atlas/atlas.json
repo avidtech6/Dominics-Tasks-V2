@@ -1,0 +1,405 @@
+{
+  "schema_version": "fwv-v8-atlas-1.0",
+  "app_id": "avidtech6.dominicstasks.6be9",
+  "generated_at": "2026-06-18",
+  "modules": {
+    "M00-orchestrator": {
+      "description": "Routes + Behaviour DI",
+      "surfaces": [
+        "all-routes"
+      ],
+      "behaviours": [
+        "TaskBehaviour",
+        "ChatBehaviour",
+        "FamilyBehaviour",
+        "AuthBehaviour"
+      ],
+      "files": [
+        "src/orchestrator/AppOrchestrator.tsx"
+      ],
+      "test_file": "app-vp/validity/m00_orchestrator.spec.ts",
+      "recipe_book": "app-fragments/orchestrator/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "all-routes \u2192 TaskBehaviour",
+          "all-routes \u2192 ChatBehaviour",
+          "all-routes \u2192 FamilyBehaviour",
+          "all-routes \u2192 AuthBehaviour"
+        ],
+        "behaviour \u2192 file": [],
+        "module \u2192 test": "M00-orchestrator \u2192 app-vp/validity/m00_orchestrator.spec.ts"
+      }
+    },
+    "M00b-data-layer": {
+      "description": "Repository pattern + types",
+      "surfaces": [
+        "repositories"
+      ],
+      "behaviours": [],
+      "files": [
+        "src/data/AuthRepository.ts",
+        "src/data/ChatRepository.ts",
+        "src/data/FamilyRepository.ts",
+        "src/data/TaskRepository.ts",
+        "src/data/FirebaseAuthRepository.ts",
+        "src/data/FirebaseChatRepository.ts",
+        "src/data/FirebaseFamilyRepository.ts",
+        "src/data/FirebaseTaskRepository.ts",
+        "src/data/LocalChatRepository.ts",
+        "src/data/LocalFamilyRepository.ts",
+        "src/data/LocalTaskRepository.ts",
+        "src/data/constants.ts",
+        "src/data/types.ts",
+        "src/data/utils.ts"
+      ],
+      "test_file": "app-vp/validity/m00b_data_layer.spec.ts",
+      "recipe_book": "app-fragments/data-layer/",
+      "chain": {
+        "surface \u2192 behaviour": [],
+        "behaviour \u2192 file": [],
+        "module \u2192 test": "M00b-data-layer \u2192 app-vp/validity/m00b_data_layer.spec.ts"
+      }
+    },
+    "M01-tasks": {
+      "description": "Tasks kanban + CRUD",
+      "surfaces": [
+        "/tasks",
+        "TaskModal",
+        "CommentsModal"
+      ],
+      "behaviours": [
+        "TaskBehaviour"
+      ],
+      "files": [
+        "src/pages/Tasks.tsx",
+        "src/components/TaskCard.tsx",
+        "src/components/TaskColumn.tsx",
+        "src/components/TaskModal.tsx",
+        "src/components/CommentsModal.tsx",
+        "src/behaviours/TaskBehaviour.ts",
+        "src/components/TaskCardBehaviour.ts",
+        "src/components/TaskModalBehaviour.ts",
+        "src/components/CommentsModalBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m01_tasks.spec.ts",
+      "recipe_book": "app-fragments/tasks/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/tasks \u2192 TaskBehaviour",
+          "TaskModal \u2192 TaskBehaviour",
+          "CommentsModal \u2192 TaskBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "TaskBehaviour \u2192 src/pages/Tasks.tsx",
+          "TaskBehaviour \u2192 src/components/TaskCard.tsx",
+          "TaskBehaviour \u2192 src/components/TaskColumn.tsx",
+          "TaskBehaviour \u2192 src/components/TaskModal.tsx",
+          "TaskBehaviour \u2192 src/behaviours/TaskBehaviour.ts",
+          "TaskBehaviour \u2192 src/components/TaskCardBehaviour.ts",
+          "TaskBehaviour \u2192 src/components/TaskModalBehaviour.ts"
+        ],
+        "module \u2192 test": "M01-tasks \u2192 app-vp/validity/m01_tasks.spec.ts"
+      }
+    },
+    "M02-family-chat": {
+      "description": "Family + parent chat",
+      "surfaces": [
+        "/chat",
+        "/parent-chat"
+      ],
+      "behaviours": [
+        "ChatBehaviour"
+      ],
+      "files": [
+        "src/pages/FamilyChat.tsx",
+        "src/pages/ParentChat.tsx",
+        "src/behaviours/ChatBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m02_family_chat.spec.ts",
+      "recipe_book": "app-fragments/family-chat/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/chat \u2192 ChatBehaviour",
+          "/parent-chat \u2192 ChatBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "ChatBehaviour \u2192 src/pages/FamilyChat.tsx",
+          "ChatBehaviour \u2192 src/pages/ParentChat.tsx",
+          "ChatBehaviour \u2192 src/behaviours/ChatBehaviour.ts"
+        ],
+        "module \u2192 test": "M02-family-chat \u2192 app-vp/validity/m02_family_chat.spec.ts"
+      }
+    },
+    "M03-family-setup": {
+      "description": "Family creation + profile selection",
+      "surfaces": [
+        "/setup",
+        "/profile-select"
+      ],
+      "behaviours": [
+        "FamilyBehaviour"
+      ],
+      "files": [
+        "src/components/FamilySetupScreen.tsx",
+        "src/components/ProfileSelectionScreen.tsx",
+        "src/behaviours/FamilyBehaviour.ts",
+        "src/components/FamilySetupScreenBehaviour.ts",
+        "src/components/ProfileSelectionScreenBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m03_family_setup.spec.ts",
+      "recipe_book": "app-fragments/family-setup/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/setup \u2192 FamilyBehaviour",
+          "/profile-select \u2192 FamilyBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "FamilyBehaviour \u2192 src/components/FamilySetupScreen.tsx",
+          "FamilyBehaviour \u2192 src/behaviours/FamilyBehaviour.ts",
+          "FamilyBehaviour \u2192 src/components/FamilySetupScreenBehaviour.ts"
+        ],
+        "module \u2192 test": "M03-family-setup \u2192 app-vp/validity/m03_family_setup.spec.ts"
+      }
+    },
+    "M04-auth": {
+      "description": "Auth + landing",
+      "surfaces": [
+        "/login"
+      ],
+      "behaviours": [
+        "AuthBehaviour"
+      ],
+      "files": [
+        "src/pages/LandingPage.tsx",
+        "src/pages/Login.tsx",
+        "src/behaviours/AuthBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m04_auth.spec.ts",
+      "recipe_book": "app-fragments/auth/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/login \u2192 AuthBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "AuthBehaviour \u2192 src/behaviours/AuthBehaviour.ts"
+        ],
+        "module \u2192 test": "M04-auth \u2192 app-vp/validity/m04_auth.spec.ts"
+      }
+    },
+    "M05-calendar": {
+      "description": "Calendar view of tasks",
+      "surfaces": [
+        "/calendar"
+      ],
+      "behaviours": [
+        "TaskBehaviour (read)"
+      ],
+      "files": [
+        "src/pages/Calendar.tsx"
+      ],
+      "test_file": "app-vp/validity/m05_calendar.spec.ts",
+      "recipe_book": "app-fragments/calendar/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/calendar \u2192 TaskBehaviour (read)"
+        ],
+        "behaviour \u2192 file": [],
+        "module \u2192 test": "M05-calendar \u2192 app-vp/validity/m05_calendar.spec.ts"
+      }
+    },
+    "M06-resources": {
+      "description": "Static resources",
+      "surfaces": [
+        "/resources"
+      ],
+      "behaviours": [],
+      "files": [
+        "src/pages/Resources.tsx"
+      ],
+      "test_file": "app-vp/validity/m06_resources.spec.ts",
+      "recipe_book": "app-fragments/resources/",
+      "chain": {
+        "surface \u2192 behaviour": [],
+        "behaviour \u2192 file": [],
+        "module \u2192 test": "M06-resources \u2192 app-vp/validity/m06_resources.spec.ts"
+      }
+    },
+    "M07-history": {
+      "description": "Completed/cancelled tasks",
+      "surfaces": [
+        "/history"
+      ],
+      "behaviours": [
+        "TaskBehaviour (read)"
+      ],
+      "files": [
+        "src/pages/History.tsx"
+      ],
+      "test_file": "app-vp/validity/m07_history.spec.ts",
+      "recipe_book": "app-fragments/history/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/history \u2192 TaskBehaviour (read)"
+        ],
+        "behaviour \u2192 file": [],
+        "module \u2192 test": "M07-history \u2192 app-vp/validity/m07_history.spec.ts"
+      }
+    },
+    "M08-achievements": {
+      "description": "Achievement badges + confetti",
+      "surfaces": [
+        "/achievements"
+      ],
+      "behaviours": [
+        "AchievementBadgeBehaviour",
+        "ConfettiCelebrationBehaviour"
+      ],
+      "files": [
+        "src/pages/Achievements.tsx",
+        "src/components/AchievementBadge.tsx",
+        "src/components/ConfettiCelebration.tsx",
+        "src/components/AchievementBadgeBehaviour.ts",
+        "src/components/ConfettiCelebrationBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m08_achievements.spec.ts",
+      "recipe_book": "app-fragments/achievements/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/achievements \u2192 AchievementBadgeBehaviour",
+          "/achievements \u2192 ConfettiCelebrationBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "AchievementBadgeBehaviour \u2192 src/components/AchievementBadge.tsx",
+          "AchievementBadgeBehaviour \u2192 src/components/AchievementBadgeBehaviour.ts",
+          "ConfettiCelebrationBehaviour \u2192 src/components/ConfettiCelebration.tsx",
+          "ConfettiCelebrationBehaviour \u2192 src/components/ConfettiCelebrationBehaviour.ts"
+        ],
+        "module \u2192 test": "M08-achievements \u2192 app-vp/validity/m08_achievements.spec.ts"
+      }
+    },
+    "M09-parent-dashboard": {
+      "description": "Parent admin (PIN-gate currently disabled)",
+      "surfaces": [
+        "/admin"
+      ],
+      "behaviours": [
+        "PinPadBehaviour"
+      ],
+      "files": [
+        "src/components/ParentDashboard.tsx",
+        "src/components/ParentPinModal.tsx",
+        "src/components/PinPad.tsx",
+        "src/components/PinPadBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m09_parent_dashboard.spec.ts",
+      "recipe_book": "app-fragments/parent-dashboard/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/admin \u2192 PinPadBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "PinPadBehaviour \u2192 src/components/PinPad.tsx",
+          "PinPadBehaviour \u2192 src/components/PinPadBehaviour.ts"
+        ],
+        "module \u2192 test": "M09-parent-dashboard \u2192 app-vp/validity/m09_parent_dashboard.spec.ts"
+      }
+    },
+    "M10-layout": {
+      "description": "App shell + nav",
+      "surfaces": [
+        "layout-shell"
+      ],
+      "behaviours": [
+        "LayoutBehaviour"
+      ],
+      "files": [
+        "src/components/Layout.tsx",
+        "src/components/LayoutBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m10_layout.spec.ts",
+      "recipe_book": "app-fragments/layout/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "layout-shell \u2192 LayoutBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "LayoutBehaviour \u2192 src/components/Layout.tsx",
+          "LayoutBehaviour \u2192 src/components/LayoutBehaviour.ts"
+        ],
+        "module \u2192 test": "M10-layout \u2192 app-vp/validity/m10_layout.spec.ts"
+      }
+    },
+    "M11-comments": {
+      "description": "Per-task comment threads",
+      "surfaces": [
+        "/task-comment/:taskId",
+        "CommentsModal"
+      ],
+      "behaviours": [
+        "CommentsModalBehaviour"
+      ],
+      "files": [
+        "src/pages/TaskComment.tsx",
+        "src/components/CommentsModal.tsx",
+        "src/components/CommentsModalBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m11_comments.spec.ts",
+      "recipe_book": "app-fragments/comments/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/task-comment/:taskId \u2192 CommentsModalBehaviour",
+          "CommentsModal \u2192 CommentsModalBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "CommentsModalBehaviour \u2192 src/components/CommentsModal.tsx",
+          "CommentsModalBehaviour \u2192 src/components/CommentsModalBehaviour.ts"
+        ],
+        "module \u2192 test": "M11-comments \u2192 app-vp/validity/m11_comments.spec.ts"
+      }
+    },
+    "M12-error-boundary": {
+      "description": "React error boundary",
+      "surfaces": [
+        "error-fallback"
+      ],
+      "behaviours": [
+        "ErrorBoundaryBehaviour"
+      ],
+      "files": [
+        "src/components/ErrorBoundary.tsx",
+        "src/components/ErrorBoundaryBehaviour.ts"
+      ],
+      "test_file": "app-vp/validity/m12_error_boundary.spec.ts",
+      "recipe_book": "app-fragments/error-boundary/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "error-fallback \u2192 ErrorBoundaryBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "ErrorBoundaryBehaviour \u2192 src/components/ErrorBoundary.tsx",
+          "ErrorBoundaryBehaviour \u2192 src/components/ErrorBoundaryBehaviour.ts"
+        ],
+        "module \u2192 test": "M12-error-boundary \u2192 app-vp/validity/m12_error_boundary.spec.ts"
+      }
+    }
+  },
+  "cross_module_chains": {
+    "TaskBehaviour consumers": [
+      "M01-tasks (write)",
+      "M05-calendar (read)",
+      "M07-history (read)",
+      "M08-achievements (event subscriber)"
+    ],
+    "ChatBehaviour consumers": [
+      "M02-family-chat"
+    ],
+    "FamilyBehaviour consumers": [
+      "M03-family-setup",
+      "M10-layout (user display)"
+    ],
+    "AuthBehaviour consumers": [
+      "M04-auth",
+      "M09-parent-dashboard"
+    ]
+  }
+}

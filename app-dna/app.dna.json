@@ -1,0 +1,69 @@
+{
+  "app_id": "avidtech6.dominicstasks.6be9",
+  "app_name": "DominicsTasks",
+  "app_description": "Family task management and chat for a kid's education coordination. Originally 'Dominic Stars'.",
+  "freshvibe_way_version": "v8",
+  "refactor_completed_at": "2026-06-18",
+  "version": "0.1.0",
+  "version_history": [
+    {
+      "version": "0.1.0",
+      "date": "2026-06-18",
+      "type": "post-fwv-v8-refactor",
+      "summary": "FWV v8 code-extraction refactor applied. Recipe + Codex + Rules written for all 14 modules. Source code unchanged."
+    }
+  ],
+  "lineage": {
+    "parent": "avidtech6.DominicStars.pre-fwv-v8",
+    "source_description": "Pre-refactor React+Vite app from avidtech6/DominicsTasks repo. ~14,040 source LOC across 66 files. Behaviour-Component split already in place from prior extraction work.",
+    "refactorer": "Mavis (mavis)",
+    "refactor_method": "code-extraction-with-documentation"
+  },
+  "freshvibe_compliance": {
+    "has_recipe": true,
+    "has_codex": true,
+    "has_dna": true,
+    "has_trace_atlas": true,
+    "has_pact": true,
+    "has_fragments": true,
+    "has_vp_tests": true,
+    "all_modules_have_cookbook": true
+  },
+  "structure": {
+    "modules": [
+      "M00-orchestrator",
+      "M00b-data-layer",
+      "M01-tasks",
+      "M02-family-chat",
+      "M03-family-setup",
+      "M04-auth",
+      "M05-calendar",
+      "M06-resources",
+      "M07-history",
+      "M08-achievements",
+      "M09-parent-dashboard",
+      "M10-layout",
+      "M11-comments",
+      "M12-error-boundary"
+    ],
+    "module_count": 14,
+    "source_files": 66,
+    "source_loc": 14040
+  },
+  "build": {
+    "framework": "react@18",
+    "bundler": "vite@7",
+    "language": "typescript@5",
+    "styling": "tailwindcss",
+    "state": "react-context + custom Behaviour classes",
+    "persistence": "in-memory (Repository abstraction exists, not wired)"
+  },
+  "deploy": {
+    "primary_url": "https://ahago45ksit8.space.minimax.io",
+    "fallback_url": "https://dominicstasks.pages.dev",
+    "github": "https://github.com/avidtech6/DominicsTasks"
+  },
+  "drift_log_path": "app-recipe/snapshot/drift-log.md",
+  "shadow_path": "app-recipe/shadow/original-001/",
+  "recipe_path": "app-fragments/"
+}

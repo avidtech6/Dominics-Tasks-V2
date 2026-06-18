@@ -1,0 +1,13 @@
+{
+  "depends_on": [
+    "react@18",
+    "react-router-dom@6",
+    "../behaviours/TaskBehaviour",
+    "../behaviours/ChatBehaviour",
+    "../behaviours/FamilyBehaviour",
+    "../behaviours/AuthBehaviour"
+  ],
+  "data_shapes": ["BehaviourProvider"],
+  "env": {},
+  "optional_peer_dependencies": []
+}

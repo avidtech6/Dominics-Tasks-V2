@@ -73,11 +73,3 @@ playwright-navigate.json
 *.pid.lock
 *.seed
 *.pid
-
-# FWV v8 refactor artefacts — INCLUDED, not ignored (the Recipe travels)
-# Keep app-recipe/, app-codex/, app-pact/, app-dna/, app-fragments/, app-trace-atlas/, app-vp/
-# These are part of the deployable deliverable.
-
-# But ignore build shadow if huge
-# app-recipe/shadow/original-001/ is included for rollback
-

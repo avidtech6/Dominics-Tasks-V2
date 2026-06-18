@@ -1,0 +1,68 @@
+{
+  "app_id": "avidtech6.dominicstasks.6be9",
+  "recipe_format": "fwv-v8-recipe-1.0",
+  "generated_at": "2026-06-18",
+  "freshvibe_way_version": "v8",
+  "app_version": "0.1.0",
+  "structure": {
+    "recipe_path": "app-recipe/",
+    "codex_path": "app-codex/",
+    "pact_path": "app-pact/",
+    "dna_path": "app-dna/",
+    "fragments_path": "app-fragments/",
+    "trace_atlas_path": "app-trace-atlas/",
+    "vp_path": "app-vp/",
+    "shadow_path": "app-recipe/shadow/original-001/"
+  },
+  "modules": [
+    "M00-orchestrator",
+    "M00b-data-layer",
+    "M01-tasks",
+    "M02-family-chat",
+    "M03-family-setup",
+    "M04-auth",
+    "M05-calendar",
+    "M06-resources",
+    "M07-history",
+    "M08-achievements",
+    "M09-parent-dashboard",
+    "M10-layout",
+    "M11-comments",
+    "M12-error-boundary"
+  ],
+  "tests": {
+    "validity": {
+      "framework": "node:test (tsx)",
+      "runner": "npx tsx --test app-vp/run-validity.ts",
+      "passed": 13,
+      "failed": 0
+    },
+    "protection": {
+      "framework": "node:test (tsx)",
+      "runner": "npx tsx --test app-vp/run-protection.ts",
+      "passed": 7,
+      "failed": 0
+    }
+  },
+  "build": {
+    "framework": "react@18",
+    "bundler": "vite@7",
+    "language": "typescript@5",
+    "command": "npm run build",
+    "verified": true
+  },
+  "deploy": {
+    "primary_url": "https://ahago45ksit8.space.minimax.io",
+    "fallback_url": "https://dominicstasks.pages.dev"
+  },
+  "git": {
+    "repo": "https://github.com/avidtech6/DominicsTasks",
+    "branch": "main",
+    "tip_at_refactor_start": "b327bba1",
+    "tip_at_refactor_complete": "pending (commit at end of refactor)"
+  },
+  "file_hashes": {
+    "snapshot_method": "sha256 of shadow/original-001/ contents (first 4 chars: 6be9)",
+    "note": "Fresh rebuild → sha256 will be identical iff source is unchanged"
+  }
+}

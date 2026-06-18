@@ -1,0 +1,9 @@
+{
+  "id": "fragment.orchestrator",
+  "category": "infrastructure",
+  "module_class": "A",
+  "depends_on": ["react", "react-router-dom"],
+  "exports": ["AppOrchestrator", "useBehaviours"],
+  "behaviours": ["routing", "di", "context"],
+  "isolation_class": "A"
+}

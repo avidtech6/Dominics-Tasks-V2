@@ -1,0 +1,9 @@
+{
+  "id": "fragment.family-chat",
+  "category": "feature",
+  "module_class": "B",
+  "depends_on": ["react", "react-router-dom"],
+  "exports": [],
+  "behaviours": [],
+  "isolation_class": "B"
+}
