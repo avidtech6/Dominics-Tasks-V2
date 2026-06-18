@@ -53,6 +53,22 @@ Instantiate a `LocalTaskRepository` instead of `FirebaseTaskRepository` — the 
 
 ## C. Reconstruction Notes
 
-- The behaviour classes (TaskBehaviour, ChatBehaviour, FamilyBehaviour, AuthBehaviour) currently **do NOT use the repository abstraction** — they hold state in-memory. The data layer files exist but are unused at the moment.
-- This is a known half-extraction: the abstraction is built, the wiring isn't. Phase 3 of this refactor does NOT wire behaviour → repository (that's a future refactor).
-- Documented for portability — when behaviour classes ARE wired to repositories, the swap-test above becomes meaningful.
+- The behaviour classes (TaskBehaviour, ChatBehaviour, FamilyBehaviour, AuthBehaviour) ARE wired to localStorage via `StorageAdapter`. State survives page reload.
+- The wire-up happened in commit `0ce09d80` (post-FWV v8 refactor, v0.1.0).
+- The typed `Repository` interfaces in `src/data/*.ts` still exist but are NOT used at runtime — they document the eventual cloud-sync shape. StorageAdapter is the pragmatic bridge (write-through cache + persistence + pub/sub) that avoids invasive UI changes.
+- Future: swap StorageAdapter's localStorage calls for Firebase calls to get cloud sync. Behaviour signatures won't change.
+
+### Storage keys (localStorage)
+
+| Key | Owner | Shape |
+|---|---|---|
+| `dominicstasks.tasks.v2` | TaskBehaviour | Task[] |
+| `dominicstasks.messages.v2` | ChatBehaviour | ChatMessage[] (10 seed on first load) |
+| `dominicstasks.family.v2` | FamilyBehaviour | Profile[] |
+| `dominicstasks.family.object.v2` | FamilyBehaviour | Family singleton |
+| `dominicstasks.user.v2` | AuthBehaviour | User singleton |
+| `dominicstasks.parentpin.v2` | AuthBehaviour | string (plain text in dev, hash in prod) |
+
+### Async load pattern
+
+Every Behaviour exposes `whenReady(): Promise<void>` that resolves after initial load completes. AppOrchestrator awaits all four before rendering. UI components can rely on `getXxxSync()` returning populated data on first render.
