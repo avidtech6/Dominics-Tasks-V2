@@ -1,9 +1,37 @@
-import { Task, TaskSection, TaskStatus, TaskPriority, TaskType, MirroredTask } from '../data/types';
-import type { TaskSection as TaskSectionType } from '../components/taskConstants';
+import { Task, TaskStatus, MirroredTask } from '../data/types';
+import { StorageAdapter } from '../data/StorageAdapter';
 
+const STORAGE_KEY = 'dominicstasks.tasks.v2';
+
+/**
+ * TaskBehaviour — persists tasks to localStorage via StorageAdapter.
+ *
+ * Before (in-memory only): tasks lost on reload.
+ * After (wired): tasks survive reload. UI gets reactive updates via subscribe().
+ *
+ * Public surface unchanged from pre-wiring version — all callers (UI components,
+ * other behaviours) work without modification.
+ */
 export class TaskBehaviour {
-  private tasks: Task[] = [];
+  private storage = new StorageAdapter<Task>(STORAGE_KEY);
   private subscribers: Set<(event: any) => void> = new Set();
+  private ready: Promise<void>;
+
+  constructor() {
+    this.ready = this.storage.load();
+    // Forward storage events to our subscribers
+    this.storage.subscribe((event) => {
+      this.notify({ ...event, source: 'storage' });
+    });
+  }
+
+  /**
+   * Wait for initial load to complete. UI components should call this once
+   * before rendering to avoid showing empty state on first paint.
+   */
+  async whenReady(): Promise<void> {
+    return this.ready;
+  }
 
   subscribe(callback: (event: any) => void): () => void {
     this.subscribers.add(callback);
@@ -15,100 +43,95 @@ export class TaskBehaviour {
   }
 
   getTasksSync(): Task[] {
-    return [...this.tasks];
+    return this.storage.getAllSync();
   }
 
   async getTasks(): Promise<Task[]> {
-    return this.getTasksSync();
+    await this.ready;
+    return this.storage.getAllSync();
   }
 
   async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> {
+    await this.ready;
     const newTask: Task = {
       ...task,
       id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.tasks.unshift(newTask);
+    await this.storage.add(newTask);
     this.notify({ type: 'task_created', task: newTask });
     return newTask;
   }
 
   async updateTask(id: string, updates: Partial<Task>): Promise<Task> {
-    const index = this.tasks.findIndex(t => t.id === id);
-    if (index === -1) {
-      throw new Error(`Task ${id} not found`);
-    }
-    const updatedTask = {
-      ...this.tasks[index],
-      ...updates,
-      updatedAt: new Date(),
-    };
-    this.tasks[index] = updatedTask;
-    this.notify({ type: 'task_updated', task: updatedTask });
-    return updatedTask;
+    await this.ready;
+    const updated = await this.storage.update(id, { ...updates, updatedAt: new Date() });
+    this.notify({ type: 'task_updated', task: updated });
+    return updated;
   }
 
   async deleteTask(id: string): Promise<void> {
-    const index = this.tasks.findIndex(t => t.id === id);
-    if (index === -1) {
-      throw new Error(`Task ${id} not found`);
-    }
-    const taskToDelete = this.tasks[index];
-    taskToDelete.status = 'cancelled' as TaskStatus;
-    this.notify({ type: 'task_deleted', task: taskToDelete });
+    await this.ready;
+    await this.storage.softDelete(id);
+    const task = this.storage.getByIdSync(id);
+    this.notify({ type: 'task_deleted', task });
   }
 
   async completeTask(id: string): Promise<Task> {
-    const index = this.tasks.findIndex(t => t.id === id);
-    if (index === -1) {
-      throw new Error(`Task ${id} not found`);
-    }
-    const updatedTask = {
-      ...this.tasks[index],
+    await this.ready;
+    const updated = await this.storage.update(id, {
       status: 'done' as TaskStatus,
       completedAt: new Date(),
       updatedAt: new Date(),
-    };
-    this.tasks[index] = updatedTask;
-    this.notify({ type: 'task_updated', task: updatedTask });
-    return updatedTask;
+    });
+    this.notify({ type: 'task_updated', task: updated });
+    return updated;
   }
 
   async getMirroredTasks(): Promise<MirroredTask[]> {
-    return this.tasks.filter(t => t.section === 'assignments' || t.section === 'leftovers')
+    await this.ready;
+    return this.storage
+      .getAllSync()
+      .filter(t => t.section === 'assignments' || t.section === 'leftovers')
       .map(t => ({ ...t, isMirrored: true, originalTaskId: t.id }));
   }
 
   // Task approval methods
   async getPendingApprovals(): Promise<any[]> {
-    // For now, return an empty array as placeholder
-    // This could be extended to track actual task approvals
     return [];
   }
 
   async approveTaskCompletion(approvalId: string): Promise<void> {
-    // Placeholder implementation
     console.log(`Approving task completion for: ${approvalId}`);
   }
 
   async rejectTaskCompletion(approvalId: string, reason?: string): Promise<void> {
-    // Placeholder implementation
     console.log(`Rejecting task completion for: ${approvalId}`, reason);
   }
 
   async restoreDeletedTasks(): Promise<number> {
-    // Placeholder implementation - restore tasks with 'cancelled' status
-    const cancelledTasks = this.tasks.filter(t => t.status === 'cancelled');
-    cancelledTasks.forEach(task => {
-      task.status = 'pending' as TaskStatus;
-      task.updatedAt = new Date();
-    });
-    this.notify({ type: 'tasks_restored', tasks: cancelledTasks });
-    return cancelledTasks.length;
+    await this.ready;
+    const cancelled = this.storage.getAllSync().filter(t => t.status === 'cancelled');
+    let count = 0;
+    for (const t of cancelled) {
+      await this.storage.update(t.id, {
+        status: 'pending' as TaskStatus,
+        updatedAt: new Date(),
+      });
+      count++;
+    }
+    this.notify({ type: 'tasks_restored', tasks: cancelled });
+    return count;
   }
 
   getDeletedTasks(): Task[] {
-    return this.tasks.filter(t => t.status === 'cancelled');
+    return this.storage.getAllSync().filter(t => t.status === 'cancelled');
+  }
+
+  /** Test helper — clear all persisted tasks. */
+  async _clearForTest(): Promise<void> {
+    await this.storage.clear();
+    this.notify({ type: 'cleared' });
   }
 }

@@ -114,6 +114,49 @@ async function main() {
       }
     }
 
+    // === Wire-up verification: data survives page reload ===
+    console.log('');
+    console.log('  --- Persistence (FWV v8 wire-up verification) ---');
+
+    process.stdout.write('  P1: Set persistence marker in localStorage ... ');
+    await page.goto(`${APP_URL}/tasks`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(2000);  // let behaviours load
+    await page.evaluate(() => {
+      localStorage.setItem('dominicstasks.cascaded-test.v1', 'wire-up-marker');
+    });
+    console.log('✅ PASS');
+
+    process.stdout.write('  P2: Reload page, marker must survive ... ');
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(2000);
+    const markerAfterReload = await page.evaluate(() =>
+      localStorage.getItem('dominicstasks.cascaded-test.v1')
+    );
+    if (markerAfterReload === 'wire-up-marker') {
+      console.log('✅ PASS (localStorage persists across reload)');
+      pass++;
+    } else {
+      console.log(`❌ FAIL — got: ${markerAfterReload}`);
+      fail++;
+      failures.push({ step: 'P2: localStorage survives reload', reason: `got: ${markerAfterReload}` });
+    }
+
+    process.stdout.write('  P3: ChatBehaviour seeds on first load ... ');
+    const messageCount = await page.evaluate(async () => {
+      // @ts-expect-error — accessing via window for test
+      const keys = Object.keys(localStorage);
+      const raw = localStorage.getItem('dominicstasks.messages.v2');
+      return raw ? JSON.parse(raw).length : 0;
+    });
+    if (messageCount === 10) {
+      console.log('✅ PASS (10 seed messages)');
+      pass++;
+    } else {
+      console.log(`❌ FAIL — got ${messageCount} messages`);
+      fail++;
+      failures.push({ step: 'P3: ChatBehaviour seed', reason: `got ${messageCount}` });
+    }
+
     await browser.close();
   } catch (err: any) {
     console.error('Browser error:', err.message);

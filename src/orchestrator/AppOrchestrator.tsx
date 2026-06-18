@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { TaskBehaviour } from '../behaviours/TaskBehaviour';
 import { ChatBehaviour } from '../behaviours/ChatBehaviour';
@@ -20,15 +20,16 @@ import ProfileSelectionScreen from '../components/ProfileSelectionScreen';
 import FamilySetupScreen from '../components/FamilySetupScreen';
 import ParentDashboard from '../components/ParentDashboard';
 
-// Create context for behaviours
-const BehaviourContext = createContext<{
-  taskBehaviour: import('../behaviours/TaskBehaviour').TaskBehaviour;
-  chatBehaviour: import('../behaviours/ChatBehaviour').ChatBehaviour;
-  familyBehaviour: import('../behaviours/FamilyBehaviour').FamilyBehaviour;
-  authBehaviour: import('../behaviours/AuthBehaviour').AuthBehaviour;
-} | null>(null);
+interface BehaviourProvider {
+  taskBehaviour: TaskBehaviour;
+  chatBehaviour: ChatBehaviour;
+  familyBehaviour: FamilyBehaviour;
+  authBehaviour: AuthBehaviour;
+  ready: boolean;
+}
 
-// Hook to use behaviours
+const BehaviourContext = createContext<BehaviourProvider | null>(null);
+
 export const useBehaviours = () => {
   const context = useContext(BehaviourContext);
   if (!context) {
@@ -37,7 +38,6 @@ export const useBehaviours = () => {
   return context;
 };
 
-// Loading spinner (unchanged)
 const LoadingScreen: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -49,78 +49,85 @@ const LoadingScreen: React.FC = () => {
   );
 };
 
-// No wrapper needed - direct rendering
-
-// Protected page wrapper - no authentication gating
 const ProtectedPage: React.FC<{ children: React.ReactNode; requireParent?: boolean }> = ({
   children,
-  requireParent = false
+  requireParent = false,
 }) => {
   return <>{children}</>;
 };
 
-// Admin page wrapper - no authentication gating
 const AdminPage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-// Main app routes
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Main app shell - default route */}
       <Route path="/" element={<Navigate to="/tasks" replace />} />
       <Route path="/login" element={<LandingPage />} />
 
-      {/* Protected routes wrapper */}
-      <Route element={
-        <ProtectedPage>
-          <Layout>
-            <Outlet />
-          </Layout>
-        </ProtectedPage>
-      }>
+      <Route
+        element={
+          <ProtectedPage>
+            <Layout>
+              <Outlet />
+            </Layout>
+          </ProtectedPage>
+        }
+      >
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/chat" element={<FamilyChat />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/history" element={<History />} />
         <Route path="/achievements" element={<Achievements />} />
-        
-        {/* Parent-only routes */}
+
         <Route path="/parent-chat" element={<ParentChat />} />
         <Route path="/task-comment/:taskId" element={<TaskComment />} />
         <Route path="/admin" element={<ParentDashboard />} />
       </Route>
 
-      {/* Other routes */}
       <Route path="/setup" element={<FamilySetupScreen onComplete={() => {}} />} />
-      <Route path="/profile-select" element={<ProfileSelectionScreen onProfileSelect={() => {}} onParentMode={() => {}} />} />
+      <Route
+        path="/profile-select"
+        element={<ProfileSelectionScreen onProfileSelect={() => {}} onParentMode={() => {}} />}
+      />
 
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
 
-// Main App component - orchestrator layer
 const AppOrchestrator: React.FC = () => {
-  // Create behaviour instances
+  // Behaviour instances — each loads its own data from localStorage on construct
   const taskBehaviour = useMemo(() => new TaskBehaviour(), []);
   const chatBehaviour = useMemo(() => new ChatBehaviour(), []);
   const familyBehaviour = useMemo(() => new FamilyBehaviour(), []);
   const authBehaviour = useMemo(() => new AuthBehaviour(), []);
 
-  // Behaviour provider
+  // Wait for all behaviours to finish loading before rendering
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    Promise.all([
+      taskBehaviour.whenReady(),
+      chatBehaviour.whenReady(),
+      familyBehaviour.whenReady(),
+      authBehaviour.whenReady(),
+    ]).then(() => setReady(true));
+  }, [taskBehaviour, chatBehaviour, familyBehaviour, authBehaviour]);
+
   const behaviourProvider = useMemo(
     () => ({
       taskBehaviour,
       chatBehaviour,
       familyBehaviour,
       authBehaviour,
+      ready,
     }),
-    [taskBehaviour, chatBehaviour, familyBehaviour, authBehaviour]
+    [taskBehaviour, chatBehaviour, familyBehaviour, authBehaviour, ready]
   );
+
+  if (!ready) return <LoadingScreen />;
 
   return (
     <BrowserRouter>

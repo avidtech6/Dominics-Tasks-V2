@@ -1,4 +1,7 @@
 import { ChatMessage } from '../data/types';
+import { StorageAdapter } from '../data/StorageAdapter';
+
+const STORAGE_KEY = 'dominicstasks.messages.v2';
 
 const SEED_MESSAGES: ChatMessage[] = [
   {
@@ -133,9 +136,41 @@ const SEED_MESSAGES: ChatMessage[] = [
   },
 ];
 
+/**
+ * ChatBehaviour — persists messages to localStorage. On first load (empty
+ * storage), seeds 10 demo messages so the family chat has content out of the
+ * box.
+ *
+ * Before: messages lost on reload (kept in RAM only).
+ * After: messages persist; seeds added once.
+ */
 export class ChatBehaviour {
-  private messages: ChatMessage[] = [...SEED_MESSAGES];
+  private storage = new StorageAdapter<ChatMessage>(STORAGE_KEY);
   private subscribers: Set<(event: any) => void> = new Set();
+  private ready: Promise<void>;
+  private seeded = false;
+
+  constructor() {
+    this.ready = (async () => {
+      await this.storage.load();
+      // Seed if empty (first-ever load)
+      if (this.storage.getAllSync().length === 0 && !this.seeded) {
+        this.seeded = true;
+        for (const m of SEED_MESSAGES) {
+          await this.storage.add(m);
+        }
+        this.notify({ type: 'seeded', count: SEED_MESSAGES.length });
+      }
+    })();
+    // Forward storage events
+    this.storage.subscribe((event) => {
+      this.notify({ ...event, source: 'storage' });
+    });
+  }
+
+  async whenReady(): Promise<void> {
+    return this.ready;
+  }
 
   subscribe(callback: (event: any) => void): () => void {
     this.subscribers.add(callback);
@@ -147,21 +182,30 @@ export class ChatBehaviour {
   }
 
   async getChatMessages(): Promise<ChatMessage[]> {
-    return [...this.messages];
+    await this.ready;
+    return [...this.storage.getAllSync()];
   }
 
   getMessagesSync(): ChatMessage[] {
-    return [...this.messages];
+    return [...this.storage.getAllSync()];
   }
 
   async sendChatMessage(message: Omit<ChatMessage, 'id' | 'timestamp'>): Promise<ChatMessage> {
+    await this.ready;
     const newMessage: ChatMessage = {
       ...message,
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date(),
     };
-    this.messages.push(newMessage);
+    await this.storage.add(newMessage);
     this.notify({ type: 'message_sent', message: newMessage });
     return newMessage;
+  }
+
+  /** Test helper — clear and re-seed. */
+  async _clearForTest(): Promise<void> {
+    this.seeded = false;
+    await this.storage.clear();
+    this.notify({ type: 'cleared' });
   }
 }

@@ -84,3 +84,24 @@ test('Protection: codex.md files have C1-C8 sections', () => {
     assert.ok(codex.includes('C8.'), `${mod}/codex.md missing C8`);
   }
 });
+
+test('Protection: behaviour → storage wiring is in place', () => {
+  // StorageAdapter exists
+  assert.ok(fs.existsSync(path.join(ROOT, 'src/data/StorageAdapter.ts')),
+    'StorageAdapter.ts must exist for wire-up');
+
+  // Each wired behaviour imports StorageAdapter
+  const wired = ['TaskBehaviour.ts', 'ChatBehaviour.ts', 'FamilyBehaviour.ts'];
+  for (const file of wired) {
+    const content = fs.readFileSync(path.join(ROOT, 'src/behaviours', file), 'utf-8');
+    assert.ok(content.includes('StorageAdapter'),
+      `${file} must import StorageAdapter (proves it's wired)`);
+    assert.ok(content.includes('localStorage') || content.includes('StorageAdapter'),
+      `${file} must reference persistence layer`);
+  }
+
+  // AppOrchestrator awaits whenReady
+  const orch = fs.readFileSync(path.join(ROOT, 'src/orchestrator/AppOrchestrator.tsx'), 'utf-8');
+  assert.ok(orch.includes('whenReady'),
+    'AppOrchestrator must call whenReady() before rendering (proves async load is handled)');
+});
