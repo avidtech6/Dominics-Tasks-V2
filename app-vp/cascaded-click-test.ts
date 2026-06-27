@@ -157,6 +157,35 @@ async function main() {
       failures.push({ step: 'P3: ChatBehaviour seed', reason: `got ${messageCount}` });
     }
 
+    process.stdout.write('  P4: FreshCards substrate — default databases exist ... ');
+    const dbCount = await page.evaluate(() => {
+      return ['dominicstasks.db.db_tasks', 'dominicstasks.db.db_chat']
+        .filter(k => localStorage.getItem(k) !== null).length;
+    });
+    if (dbCount === 2) {
+      console.log('✅ PASS (Tasks + Chat databases initialised)');
+      pass++;
+    } else {
+      console.log(`❌ FAIL — only ${dbCount}/2 substrate databases present`);
+      fail++;
+      failures.push({ step: 'P4: substrate databases', reason: `got ${dbCount}/2` });
+    }
+
+    process.stdout.write('  P5: Substrate — Tasks db has 4 view configs persisted ... ');
+    const viewCount = await page.evaluate(() => {
+      const raw = localStorage.getItem('dominicstasks.db.db_tasks');
+      if (!raw) return 0;
+      try { return JSON.parse(raw).views.length; } catch { return 0; }
+    });
+    if (viewCount === 4) {
+      console.log('✅ PASS (Board / List / Gallery / Calendar)');
+      pass++;
+    } else {
+      console.log(`❌ FAIL — got ${viewCount} views, expected 4`);
+      fail++;
+      failures.push({ step: 'P5: substrate view configs', reason: `got ${viewCount}` });
+    }
+
     await browser.close();
   } catch (err: any) {
     console.error('Browser error:', err.message);

@@ -105,3 +105,26 @@ test('Protection: behaviour → storage wiring is in place', () => {
   assert.ok(orch.includes('whenReady'),
     'AppOrchestrator must call whenReady() before rendering (proves async load is handled)');
 });
+
+test('Protection: FreshCards substrate pieces all present', () => {
+  const required = [
+    'src/substrate/EventBus.ts',
+    'src/substrate/Database.ts',
+    'src/substrate/coverResolver.ts',
+    'src/substrate/useVibeCardState.ts',
+    'src/substrate/Chip.tsx',
+    'src/substrate/PropertyChip.tsx',
+    'src/substrate/PeekContainer.tsx',
+    'src/substrate/viewConfigStore.ts',
+    'src/substrate/adapters.ts',
+  ];
+  for (const f of required) {
+    assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} missing`);
+  }
+});
+
+test('Protection: AppOrchestrator initialises substrate on startup', () => {
+  const orch = fs.readFileSync(path.join(ROOT, 'src/orchestrator/AppOrchestrator.tsx'), 'utf-8');
+  assert.ok(orch.includes('ensureDefaultDatabases'),
+    'AppOrchestrator must call ensureDefaultDatabases() (proves substrate is wired)');
+});

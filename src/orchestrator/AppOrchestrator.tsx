@@ -4,6 +4,7 @@ import { TaskBehaviour } from '../behaviours/TaskBehaviour';
 import { ChatBehaviour } from '../behaviours/ChatBehaviour';
 import { FamilyBehaviour } from '../behaviours/FamilyBehaviour';
 import { AuthBehaviour } from '../behaviours/AuthBehaviour';
+import { ensureDefaultDatabases } from '../substrate/viewConfigStore';
 
 // Import components
 import Layout from '../components/Layout';
@@ -113,7 +114,17 @@ const AppOrchestrator: React.FC = () => {
       chatBehaviour.whenReady(),
       familyBehaviour.whenReady(),
       authBehaviour.whenReady(),
-    ]).then(() => setReady(true));
+    ])
+      .then(() => {
+        // Substrate: ensure default databases (with view configs) exist in storage.
+        // This is the persistence seam for future ViewSwitcher / multi-board features.
+        ensureDefaultDatabases();
+        setReady(true);
+      })
+      .catch((err) => {
+        console.error('[AppOrchestrator] whenReady failed:', err);
+        setReady(true); // fail open — UI still renders
+      });
   }, [taskBehaviour, chatBehaviour, familyBehaviour, authBehaviour]);
 
   const behaviourProvider = useMemo(
