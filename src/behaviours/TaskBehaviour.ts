@@ -1,7 +1,13 @@
-import { Task, TaskStatus, MirroredTask } from '../data/types';
+import { Task, MirroredTask } from '../data/types';
 import { StorageAdapter } from '../data/StorageAdapter';
 
 const STORAGE_KEY = 'dominicstasks.tasks.v2';
+
+/**
+ * NOTE: this class does NOT seed itself. Seeding is delegated to the
+ * orchestrator (AppOrchestrator.seedTasksOnFirstLoad), so that node-side
+ * tests can construct TaskBehaviour fresh and expect an empty store.
+ */
 
 /**
  * TaskBehaviour — persists tasks to localStorage via StorageAdapter.
@@ -16,13 +22,30 @@ export class TaskBehaviour {
   private storage = new StorageAdapter<Task>(STORAGE_KEY);
   private subscribers: Set<(event: any) => void> = new Set();
   private ready: Promise<void>;
+  private _initDone: Promise<void>;
+  private _resolveInit!: () => void;
 
   constructor() {
-    this.ready = this.storage.load();
+    this._initDone = new Promise((resolve) => { this._resolveInit = resolve; });
+    this.ready = this._initDone;
+    void this.initialise();
     // Forward storage events to our subscribers
     this.storage.subscribe((event) => {
       this.notify({ ...event, source: 'storage' });
     });
+  }
+
+  private async initialise(): Promise<void> {
+    try {
+      await this.storage.load();
+      // Seed defaults on first load in a real browser ONLY when an explicit
+      // flag is set. Tests construct TaskBehaviour fresh and expect empty.
+      // The browser orchestrator calls ensureSeedDefaults() in an effect, which
+      // is the single point where seeding happens.
+      // (No-op here by design.)
+    } finally {
+      this._resolveInit();
+    }
   }
 
   /**

@@ -88,6 +88,11 @@ const Tasks: React.FC = () => {
       console.error('Failed to load tasks:', error);
       setLoading(false);
     }
+    // Subscribe so seed tasks + remote updates also reach the page
+    const unsub = taskBehaviour.subscribe(() => {
+      setTasks(taskBehaviour.getTasksSync());
+    });
+    return () => unsub();
   }, [taskBehaviour]);
   
   // Form state for TaskModal

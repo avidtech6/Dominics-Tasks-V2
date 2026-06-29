@@ -5,6 +5,27 @@ import { ChatBehaviour } from '../behaviours/ChatBehaviour';
 import { FamilyBehaviour } from '../behaviours/FamilyBehaviour';
 import { AuthBehaviour } from '../behaviours/AuthBehaviour';
 import { ensureDefaultDatabases } from '../substrate/viewConfigStore';
+import { TaskBehaviour } from '../behaviours/TaskBehaviour';
+import { Task, TaskStatus, TaskType, TaskPriority } from '../data/types';
+
+/**
+ * One-shot helper to populate TaskBehaviour with seed tasks on the first
+ * browser load (when localStorage is empty). Lives in the orchestrator because
+ * tests construct TaskBehaviour fresh and expect an empty store.
+ */
+async function seedTasksOnFirstLoad(behaviour: TaskBehaviour): Promise<void> {
+  const SEED_TASKS: Array<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>> = [
+    { title: 'Morning reading', description: '20 minutes of independent reading', taskType: TaskType.PERSONAL, status: 'todo' as unknown as TaskStatus, priority: TaskPriority.MEDIUM, section: 'morning', pointsValue: 10 } as any,
+    { title: 'Maths worksheet', description: 'Page 12 — fraction problems', taskType: TaskType.HOMEWORK, status: 'todo' as unknown as TaskStatus, priority: TaskPriority.HIGH, section: 'morning', pointsValue: 15 } as any,
+    { title: 'Practice spelling', description: 'Week 8 list — 5 rounds each', taskType: TaskType.PERSONAL, status: 'todo' as unknown as TaskStatus, priority: TaskPriority.MEDIUM, section: 'afternoon', pointsValue: 8 } as any,
+    { title: 'Science experiment write-up', description: 'Plant growth observations', taskType: TaskType.HOMEWORK, status: 'todo' as unknown as TaskStatus, priority: TaskPriority.LOW, section: 'experiments', pointsValue: 12 } as any,
+    { title: 'Tidy bedroom', description: 'Bed made + clothes put away', taskType: TaskType.CHORE, status: 'todo' as unknown as TaskStatus, priority: TaskPriority.LOW, section: 'support', pointsValue: 5 } as any,
+    { title: 'Pack school bag', description: 'Lunch + water bottle + books', taskType: TaskType.CHORE, status: 'cancelled' as unknown as TaskStatus, priority: TaskPriority.MEDIUM, section: 'leftovers', pointsValue: 0 } as any,
+  ];
+  for (const seed of SEED_TASKS) {
+    await behaviour.createTask(seed);
+  }
+}
 
 // Import components
 import Layout from '../components/Layout';
@@ -136,6 +157,12 @@ const AppOrchestrator: React.FC = () => {
         // Substrate: ensure default databases (with view configs) exist in storage.
         // This is the persistence seam for future ViewSwitcher / multi-board features.
         ensureDefaultDatabases();
+        // Seed tasks (only on first browser load when localStorage is empty AND in browser).
+        // Tests construct TaskBehaviour fresh in node and never call seed.
+        const inBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+        if (inBrowser && taskBehaviour.getTasksSync().length === 0) {
+          void seedTasksOnFirstLoad(taskBehaviour);
+        }
         setReady(true);
       })
       .catch((err) => {
