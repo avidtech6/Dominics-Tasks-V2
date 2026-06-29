@@ -45,19 +45,6 @@ const Tasks: React.FC = () => {
   const [lens, setLens] = useState<DailyLens>('dominic');
   const [searchParams, setSearchParams] = useSearchParams();
   const editQueryId = searchParams.get('edit');
-
-  // If navigated from /weekly?edit=<id>, open that task's edit modal on mount.
-  useEffect(() => {
-    if (!editQueryId) return;
-    const found = tasks.find((t) => t.id === editQueryId);
-    if (found) {
-      setEditingTask(found);
-      // Drop the query param so reload doesn't re-trigger
-      const next = new URLSearchParams(searchParams);
-      next.delete('edit');
-      setSearchParams(next, { replace: true });
-    }
-  }, [editQueryId, tasks, searchParams, setSearchParams]);
   const [currentUser, setCurrentUser] = useState<{ role?: string } | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +113,19 @@ const Tasks: React.FC = () => {
     });
     return () => unsub();
   }, [taskBehaviour]);
+
+  // If navigated from /weekly?edit=<id>, open that task's edit modal on mount.
+  useEffect(() => {
+    if (!editQueryId) return;
+    const found = tasks.find((t) => t.id === editQueryId);
+    if (found) {
+      setEditingTask(found);
+      // Drop the query param so reload doesn't re-trigger
+      const next = new URLSearchParams(searchParams);
+      next.delete('edit');
+      setSearchParams(next, { replace: true });
+    }
+  }, [editQueryId, tasks, searchParams, setSearchParams]);
   
   // Form state for TaskModal
   const [formTitle, setFormTitle] = useState('');
