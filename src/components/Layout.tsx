@@ -11,6 +11,7 @@ import {
   X,
   LogOut,
   BookOpen,
+  CalendarRange,
 } from 'lucide-react';
 import { useBehaviours } from '../orchestrator/AppOrchestrator';
 
@@ -35,6 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { to: '/tasks', icon: BookOpen, label: 'Tasks' },
+    { to: '/weekly', icon: CalendarRange, label: 'Weekly' },
     { to: '/calendar', icon: Calendar, label: 'Calendar' },
     { to: '/chat', icon: MessageCircle, label: 'Chat' },
     { to: '/resources', icon: FolderOpen, label: 'Resources' },

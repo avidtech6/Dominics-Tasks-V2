@@ -381,6 +381,39 @@
         ],
         "module \u2192 test": "M12-error-boundary \u2192 app-vp/validity/m12_error_boundary.spec.ts"
       }
+    },
+    "M13-weekly": {
+      "description": "Read-only weekly overview with day-lanes + per-category swimlanes",
+      "surfaces": [
+        "/weekly"
+      ],
+      "behaviours": [
+        "WeeklyBehaviour (pure)",
+        "CategoryLaneBehaviour (shared with M-Family-View)"
+      ],
+      "files": [
+        "src/pages/Weekly.tsx",
+        "src/components/WeeklyHero.tsx",
+        "src/components/DayRail.tsx",
+        "src/components/DayLane.tsx",
+        "src/components/CategoryCard.tsx",
+        "src/components/WeekSummaryCard.tsx",
+        "src/behaviours/WeeklyBehaviour.ts",
+        "src/behaviours/CategoryLaneBehaviour.ts"
+      ],
+      "test_file": "app-vp/cascaded-click-test.ts (weekly entries)",
+      "recipe_book": "app-fragments/weekly/",
+      "chain": {
+        "surface \u2192 behaviour": [
+          "/weekly \u2192 WeeklyBehaviour",
+          "/weekly \u2192 CategoryLaneBehaviour"
+        ],
+        "behaviour \u2192 file": [
+          "WeeklyBehaviour \u2192 src/behaviours/WeeklyBehaviour.ts",
+          "CategoryLaneBehaviour \u2192 src/behaviours/CategoryLaneBehaviour.ts"
+        ],
+        "module \u2192 test": "M13-weekly \u2192 app-vp/cascaded-click-test.ts"
+      }
     }
   },
   "cross_module_chains": {

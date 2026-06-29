@@ -1,0 +1,17 @@
+{
+  "imports": [
+    "react",
+    "react-router-dom (useNavigate, useSearchParams)",
+    "date-fns (startOfWeek, endOfWeek, addDays, format, isToday, isTomorrow)",
+    "lucide-react (CheckCircle2, Star, Flame, TrendingUp, Sparkles, Trophy, X, CalendarRange)",
+    "../orchestrator/AppOrchestrator (useBehaviours for taskBehaviour)",
+    "../data/types (Task interface)",
+    "../behaviours/WeeklyBehaviour (pure helpers: getWeekRange, getWeekDays, groupTasksByDay, etc.)",
+    "../behaviours/CategoryLaneBehaviour (shared with M-Family-View: groupByCategoryForDay, getCategoryMeta)",
+    "../components/WeeklyHero, DayRail, DayLane, CategoryCard, WeekSummaryCard"
+  ],
+  "no_new_deps": true,
+  "no_new_storage_keys": true,
+  "no_new_task_types": true,
+  "no_new_statuses": true
+}

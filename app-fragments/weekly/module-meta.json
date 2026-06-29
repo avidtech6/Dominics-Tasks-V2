@@ -1,0 +1,26 @@
+{
+  "module": "weekly",
+  "title": "Weekly View",
+  "version": "0.1.0",
+  "status": "implemented",
+  "added": "2026-06-30",
+  "implements": ["recipe.md", "codex.md", "rules.md", "coverage-matrix.md"],
+  "depends_on": ["tasks", "data-layer"],
+  "files": [
+    "src/pages/Weekly.tsx",
+    "src/components/WeeklyHero.tsx",
+    "src/components/DayRail.tsx",
+    "src/components/DayLane.tsx",
+    "src/components/CategoryCard.tsx",
+    "src/components/WeekSummaryCard.tsx",
+    "src/behaviours/WeeklyBehaviour.ts",
+    "src/behaviours/CategoryLaneBehaviour.ts"
+  ],
+  "route": "/weekly",
+  "nav_entry": "Weekly (sidebar, between Tasks and Calendar)",
+  "tests": [
+    "app-vp/cascaded-click-test.ts: 11: Weekly page",
+    "app-vp/run-protection.ts: every module has all 7 recipe-book files",
+    "app-vp/run-protection.ts: Trace Atlas covers every fragment module"
+  ]
+}

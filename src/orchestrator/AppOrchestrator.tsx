@@ -31,6 +31,7 @@ async function seedTasksOnFirstLoad(behaviour: TaskBehaviour): Promise<void> {
 import Layout from '../components/Layout';
 import LandingPage from '../pages/LandingPage';
 import Tasks from '../pages/Tasks';
+import Weekly from '../pages/Weekly';
 import Calendar from '../pages/Calendar';
 import FamilyChat from '../pages/FamilyChat';
 import ParentChat from '../pages/ParentChat';
@@ -115,6 +116,7 @@ const AppRoutes: React.FC = () => {
         }
       >
         <Route path="/tasks" element={<Tasks />} />
+        <Route path="/weekly" element={<Weekly />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/chat" element={<FamilyChat />} />
         <Route path="/resources" element={<Resources />} />

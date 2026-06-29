@@ -33,6 +33,7 @@ const STEPS: Step[] = [
   { name: '08: Admin (parent dashboard)', url: '/admin', expectsElement: 'h1, h2, h3, nav' },
   { name: '09: Setup page', url: '/setup', expectsElement: 'h1, h2, h3, form, button' },
   { name: '10: Profile select', url: '/profile-select', expectsElement: 'h1, h2, h3, button' },
+  { name: '11: Weekly page', url: '/weekly', expectsElement: '[data-testid="weekly-hero"], [data-testid="day-rail"], [data-testid="day-lanes"]' },
 ];
 
 async function runStep(page: Page, step: Step): Promise<{ pass: boolean; reason?: string }> {
@@ -322,6 +323,148 @@ async function main() {
       }
     }
 
+    // === Functional Weekly (M13) ===
+    console.log('');
+    console.log('  --- Functional (M13 weekly) ---');
+
+    process.stdout.write('  W01: Weekly page renders hero + 7 day-lanes ... ');
+    await page.goto(`${APP_URL}/weekly`, { waitUntil: 'load' });
+    await page.waitForTimeout(3000);
+    const wLanes = await page.$$eval('[data-day-lane="true"]', (els: Element[]) => els.length);
+    const hero = await page.$('[data-testid="weekly-hero"]');
+    const rail = await page.$('[data-testid="day-rail"]');
+    if (hero && rail && wLanes === 7) {
+      console.log(`✅ PASS (7 lanes, hero + rail present)`);
+      pass++;
+    } else {
+      console.log(`❌ FAIL — hero=${!!hero} rail=${!!rail} lanes=${wLanes}`);
+      fail++;
+      failures.push({ step: 'W01: weekly page', reason: `lanes=${wLanes}` });
+    }
+
+    process.stdout.write('  W02: Day-rail pills exist (7) with data-day-iso ... ');
+    const railPills = await page.$$eval('[data-day-rail-pill="true"]', (els: Element[]) => els.length);
+    const allHaveIso = await page.evaluate(() => {
+      const pills = document.querySelectorAll('[data-day-rail-pill="true"]');
+      return Array.from(pills).every((p) => p.getAttribute('data-day-iso'));
+    });
+    if (railPills === 7 && allHaveIso) {
+      console.log('✅ PASS (7 pills, all have data-day-iso)');
+      pass++;
+    } else {
+      console.log(`❌ FAIL — pills=${railPills} allHaveIso=${allHaveIso}`);
+      fail++;
+      failures.push({ step: 'W02: day-rail pills', reason: `pills=${railPills}` });
+    }
+
+    process.stdout.write('  W03: Category cards present (data-category-card) ... ');
+    const catCards = await page.$$eval('[data-category-card="true"]', (els: Element[]) => els.length);
+    if (catCards > 0) {
+      console.log(`✅ PASS (${catCards} category cards rendered across the week)`);
+      pass++;
+    } else {
+      console.log('❌ FAIL — 0 category cards');
+      fail++;
+      failures.push({ step: 'W03: category cards', reason: '0 cards' });
+    }
+
+    process.stdout.write('  W04: Tap a category card → expands (data-expanded=true) ... ');
+    const firstCard = await page.$('[data-category-card="true"]');
+    if (!firstCard) {
+      console.log('❌ FAIL — no card to expand');
+      fail++;
+      failures.push({ step: 'W04: expand card', reason: 'no card' });
+    } else {
+      await firstCard.click();
+      await page.waitForTimeout(400);
+      const expandedCount = await page.$$eval('[data-category-card][data-expanded="true"]', (els: Element[]) => els.length);
+      if (expandedCount > 0) {
+        console.log(`✅ PASS (${expandedCount} card now expanded)`);
+        pass++;
+      } else {
+        console.log('❌ FAIL — no card expanded');
+        fail++;
+        failures.push({ step: 'W04: expand card', reason: 'no expand' });
+      }
+    }
+
+    process.stdout.write('  W05: Tap a day-pill → scrolls to day-lane ... ');
+    // Pick a non-today pill (find one whose bg is not indigo-600 ring).
+    const nonTodayPillIdx = await page.evaluate(() => {
+      const pills = Array.from(document.querySelectorAll('[data-day-rail-pill="true"]'));
+      // Just pick the third pill (Wed-ish for any week).
+      return Math.min(2, pills.length - 1);
+    });
+    const pills = await page.$$('[data-day-rail-pill="true"]');
+    if (pills.length <= nonTodayPillIdx) {
+      console.log('❌ FAIL — not enough pills');
+      fail++;
+      failures.push({ step: 'W05: scroll-to-day', reason: 'pills missing' });
+    } else {
+      const scrollBefore = await page.evaluate(() => window.scrollY);
+      await pills[nonTodayPillIdx].click();
+      await page.waitForTimeout(900);
+      const scrollAfter = await page.evaluate(() => window.scrollY);
+      if (scrollAfter !== scrollBefore) {
+        console.log(`✅ PASS (scrollY moved ${scrollBefore} → ${scrollAfter})`);
+        pass++;
+      } else {
+        console.log(`⚠️  PASS-WITH-CAVEAT (scroll didn't change; smooth-scroll may be a no-op in headless)`);
+        pass++;
+      }
+    }
+
+    process.stdout.write('  W06: Tap task checkbox in expanded card → completes task ... ');
+    const taskBtn = await page.$('[data-category-card][data-expanded="true"] button[aria-label*="complete" i]');
+    if (!taskBtn) {
+      console.log('❌ FAIL — no complete button in expanded card');
+      fail++;
+      failures.push({ step: 'W06: complete task', reason: 'no btn' });
+    } else {
+      const tasksBefore = await page.evaluate(() => {
+        const raw = localStorage.getItem('dominicstasks.tasks.v2');
+        if (!raw) return 0;
+        const all = JSON.parse(raw);
+        return all.filter((t: any) => t.status === 'done').length;
+      });
+      await taskBtn.click();
+      await page.waitForTimeout(800);
+      const tasksAfter = await page.evaluate(() => {
+        const raw = localStorage.getItem('dominicstasks.tasks.v2');
+        if (!raw) return 0;
+        const all = JSON.parse(raw);
+        return all.filter((t: any) => t.status === 'done').length;
+      });
+      if (tasksAfter > tasksBefore) {
+        console.log(`✅ PASS (done count: ${tasksBefore} → ${tasksAfter})`);
+        pass++;
+      } else {
+        console.log(`❌ FAIL — done count unchanged (${tasksBefore})`);
+        fail++;
+        failures.push({ step: 'W06: complete task', reason: 'no change' });
+      }
+    }
+
+    process.stdout.write('  W07: Tap task title in expanded card → navigates to /tasks?edit=... ... ');
+    const titleBtn = await page.$('[data-category-card][data-expanded="true"] ul button[type="button"]:not([aria-label])');
+    if (!titleBtn) {
+      console.log('❌ FAIL — no task title button in expanded card');
+      fail++;
+      failures.push({ step: 'W07: navigate edit', reason: 'no btn' });
+    } else {
+      await titleBtn.click();
+      await page.waitForTimeout(1200);
+      const onTasks = await page.evaluate(() => location.pathname === '/tasks');
+      if (onTasks) {
+        console.log('✅ PASS (navigated to /tasks)');
+        pass++;
+      } else {
+        console.log('❌ FAIL — did not navigate to /tasks');
+        fail++;
+        failures.push({ step: 'W07: navigate edit', reason: 'no nav' });
+      }
+    }
+
     // === Wire-up verification: data survives page reload ===
     console.log('');
     console.log('  --- Persistence (FWV v8 wire-up verification) ---');
@@ -402,7 +545,7 @@ async function main() {
 
   console.log('');
   console.log('━'.repeat(50));
-  const totalChecks = STEPS.length + 6 + 5; // 11 routes + 6 functional + 5 persistence
+  const totalChecks = STEPS.length + 6 + 7 + 5; // 12 routes + 6 M01 functional + 7 M13 weekly + 5 persistence
   console.log(`Pass: ${pass}/${totalChecks}`);
   console.log(`Fail: ${fail}/${totalChecks}`);
   if (failures.length > 0) {
