@@ -47,6 +47,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
     onComplete?.();
   };
 
+  const handleCardClick = () => {
+    // Per recipe §B Inputs: 'click card to open modal' — opens the edit modal.
+    onEdit?.();
+  };
+
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete?.();
@@ -68,6 +73,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   return (
     <div
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
+      data-testid={`task-card-${task.id}`}
       className={`task-card bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer task-type-${task.taskType}`}
       style={statusStyles}
     >

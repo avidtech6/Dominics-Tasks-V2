@@ -23,8 +23,12 @@ const getFileCategory = () => 'document';
 const PARENT_MESSAGES_COLLECTION = 'parent_messages';
 
 const ParentChat: React.FC = () => {
-  const { chatBehaviour } = useBehaviours();
+  const { chatBehaviour, authBehaviour } = useBehaviours();
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ uid?: string; id?: string } | null>(null);
+  useEffect(() => {
+    authBehaviour.getCurrentUser().then((u) => setCurrentUser(u));
+  }, [authBehaviour]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -278,7 +282,7 @@ const ParentChat: React.FC = () => {
 
                 {/* Messages */}
                 {dateMessages.map((message) => {
-                  const isOwnMessage = message.senderId === user?.uid;
+                  const isOwnMessage = message.senderId === (currentUser?.uid || currentUser?.id);
 
                   return (
                     <div
@@ -372,7 +376,7 @@ const ParentChat: React.FC = () => {
                                       key={emoji}
                                       onClick={() => addReaction(message.id, emoji)}
                                       className={`text-sm px-2.5 py-1 rounded-full border ${
-                                        (users as unknown as string[]).includes(user?.uid || '')
+                                        (users as unknown as string[]).includes(currentUser?.uid || currentUser?.id || '')
                                           ? 'bg-purple-100 border-purple-300 text-purple-700'
                                           : 'bg-gray-100 border-gray-300 text-gray-700'
                                       }`}

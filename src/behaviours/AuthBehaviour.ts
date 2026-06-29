@@ -63,6 +63,20 @@ export class AuthBehaviour {
     return { ...this.currentUser };
   }
 
+  async signOut(): Promise<void> {
+    // Per codex §C5 (Auth failure mode): sign-out clears persisted user
+    // and falls back to DEFAULT_USER. Real impl (when Firebase is wired)
+    // would call FirebaseAuthRepository.signOut first.
+    this.currentUser = { ...DEFAULT_USER };
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('dominicstasks.parentpin.v2');
+    } catch (err) {
+      console.error('[AuthBehaviour] signOut clear failed:', err);
+    }
+    this.notify({ type: 'signed_out' });
+  }
+
   async exitParentMode(): Promise<void> {
     console.log('Exiting parent mode');
     this.notify({ type: 'parent_mode_exited' });

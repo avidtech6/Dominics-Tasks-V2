@@ -6,6 +6,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useBehaviours } from '../orchestrator/AppOrchestrator';
 import { Achievement, Task } from '../data/types';
+import ConfettiCelebration from '../components/ConfettiCelebration';
 import { User } from '../data/types';
 import { Trophy, Flame, Star, Target, BookOpen, Zap, Award } from 'lucide-react';
 import AchievementBadge from '../components/AchievementBadge';
@@ -170,6 +171,23 @@ const Achievements: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+  const [celebrate, setCelebrate] = useState<{ show: boolean; title: string }>({ show: false, title: '' });
+
+  // Per M08 recipe §A: ConfettiCelebration fires on task completion milestone.
+  useEffect(() => {
+    const unsub = taskBehaviour.subscribe(async (event: any) => {
+      if (event?.type === 'task_updated' && event.task?.status === 'done') {
+        // Simple milestone rule: 1st task = first_achievement. Real rules in AchievementBadgeBehaviour.
+        const completed = await taskBehaviour.getTasks();
+        const done = (completed || []).filter((t) => t.status === 'done');
+        if (done.length === 1) {
+          setCelebrate({ show: true, title: 'First Task Complete!' });
+          setTimeout(() => setCelebrate((c) => ({ ...c, show: false })), 3500);
+        }
+      }
+    });
+    return () => unsub();
+  }, [taskBehaviour]);
 
   // Load user data
   useEffect(() => {
@@ -218,6 +236,11 @@ const Achievements: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <ConfettiCelebration
+        show={celebrate.show}
+        message={celebrate.title}
+        onComplete={() => setCelebrate((c) => ({ ...c, show: false }))}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

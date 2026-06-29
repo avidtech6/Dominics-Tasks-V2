@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { TaskBehaviour } from '../behaviours/TaskBehaviour';
 import { ChatBehaviour } from '../behaviours/ChatBehaviour';
 import { FamilyBehaviour } from '../behaviours/FamilyBehaviour';
@@ -62,6 +62,23 @@ const AdminPage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const AppRoutes: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Per M03 recipe §A: FamilySetupScreen onComplete → /profile-select
+  // ProfileSelectionScreen onProfileSelect → /tasks
+  // onParentMode → /admin
+  const handleSetupComplete = () => {
+    navigate('/profile-select');
+  };
+
+  const handleProfileSelect = (_profileId: string) => {
+    navigate('/tasks');
+  };
+
+  const handleParentMode = () => {
+    navigate('/admin');
+  };
+
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/tasks" replace />} />
@@ -88,10 +105,10 @@ const AppRoutes: React.FC = () => {
         <Route path="/admin" element={<ParentDashboard />} />
       </Route>
 
-      <Route path="/setup" element={<FamilySetupScreen onComplete={() => {}} />} />
+      <Route path="/setup" element={<FamilySetupScreen onComplete={handleSetupComplete} />} />
       <Route
         path="/profile-select"
-        element={<ProfileSelectionScreen onProfileSelect={() => {}} onParentMode={() => {}} />}
+        element={<ProfileSelectionScreen onProfileSelect={handleProfileSelect} onParentMode={handleParentMode} />}
       />
 
       <Route path="*" element={<Navigate to="/" replace />} />

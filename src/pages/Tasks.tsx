@@ -1,4 +1,16 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  DragStartEvent,
+  closestCenter,
+} from '@dnd-kit/core';
 import { useBehaviours } from '../orchestrator/AppOrchestrator';
 import TaskModal from '../components/TaskModal';
 import TaskCard from '../components/TaskCard';
@@ -33,7 +45,39 @@ const Tasks: React.FC = () => {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
+  // Drag-drop state
+  const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const draggedId = String(event.active.id);
+    const dragged = tasks.find((t) => t.id === draggedId);
+    if (dragged) setActiveDragTask(dragged);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveDragTask(null);
+    const { active, over } = event;
+    if (!over) return;
+    const taskId = String(active.id);
+    const targetSection = String(over.id) as TaskSection;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.section === targetSection) return;
+    // Optimistic update
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, section: targetSection } : t)));
+    try {
+      await taskBehaviour.updateTask(taskId, { section: targetSection });
+    } catch (err) {
+      console.error('[Tasks] drag-drop updateTask failed:', err);
+      // Revert on failure by refetching
+      const fresh = taskBehaviour.getTasksSync();
+      setTasks(fresh);
+    }
+  };
+
   // Load tasks from behaviour on mount
   useEffect(() => {
     try {
@@ -341,9 +385,20 @@ const Tasks: React.FC = () => {
   // Task Card Wrapper with Drag Support
   const TaskCardWrapper: React.FC<{ task: Task | MirroredTask; isMirrored?: boolean; index?: number }> = ({ task, isMirrored = false, index }) => {
     const handleEdit = () => setEditingTask(task);
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+
+    const style: React.CSSProperties = {
+      opacity: isDragging ? 0.4 : 1,
+      cursor: 'grab',
+      touchAction: 'none',
+    };
 
     return (
       <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
         className={`task-card-wrapper group ${task.status === 'done' ? 'completed' : ''} ${isMirrored ? 'mirrored-task' : ''}`}
         data-task-id={task.id}
         data-task-index={index}
@@ -371,13 +426,18 @@ const Tasks: React.FC = () => {
     iconClass: string;
     tasks: (Task | MirroredTask)[];
     showWhenEmpty?: boolean;
-  }> = ({ title, subtitle, icon, iconClass, tasks, showWhenEmpty = false }) => {
+    section: TaskSection;
+  }> = ({ title, subtitle, icon, iconClass, tasks, showWhenEmpty = false, section }) => {
     // Don't render anything if no tasks and not forcing show
     if (tasks.length === 0 && !showWhenEmpty) return null;
 
+    const { setNodeRef, isOver } = useDroppable({ id: section });
+
     return (
       <div
-        className={`task-section ${tasks.length === 0 ? 'empty-section' : ''}`}
+        ref={setNodeRef}
+        className={`task-section ${tasks.length === 0 ? 'empty-section' : ''} ${isOver ? 'drop-target' : ''}`}
+        data-section-id={section}
       >
         <div className="section-header">
           <div className={`section-icon ${iconClass}`}>
@@ -758,13 +818,20 @@ const Tasks: React.FC = () => {
             </button>
           </div>
 
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Today's Focus - Left Column */}
+          {/* Two Column Layout — wrapped in DndContext for drag-drop between sections (recipe §B Inputs) */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Today's Focus - Left Column */}
             <div>
               <h2 className="column-header column-header-amber">Today's Focus</h2>
               
               <TaskListSection
+                section="morning"
                 title="This Morning"
                 subtitle="Priority Focus"
                 icon={getSectionIcon('morning')}
@@ -772,8 +839,9 @@ const Tasks: React.FC = () => {
                 tasks={combinedMorningTasks}
                 showWhenEmpty={true}
               />
-              
+
               <TaskListSection
+                section="afternoon"
                 title="This Afternoon"
                 subtitle="Keep going!"
                 icon={getSectionIcon('afternoon')}
@@ -781,9 +849,10 @@ const Tasks: React.FC = () => {
                 tasks={combinedAfternoonTasks}
                 showWhenEmpty={true}
               />
-              
+
               {/* NEW: Catch Up Section */}
               <TaskListSection
+                section="catchup"
                 title="Catch Up"
                 subtitle="From yesterday & before"
                 icon={<AlertTriangle size={20} />}
@@ -800,6 +869,7 @@ const Tasks: React.FC = () => {
                     <span className="mirrored-subtitle">From other sections</span>
                   </div>
                   <TaskListSection
+                    section="morning"
                     title="Today's Assignments & Tasks"
                     subtitle="Due today - also in focus"
                     icon={<RotateCcw size={18} />}
@@ -813,8 +883,9 @@ const Tasks: React.FC = () => {
             {/* Other Activities - Right Column */}
             <div>
               <h2 className="column-header column-header-purple">Other Activities</h2>
-              
+
               <TaskListSection
+                section="assignments"
                 title="Assignments Due"
                 subtitle="Don't forget!"
                 icon={getSectionIcon('assignments')}
@@ -822,8 +893,9 @@ const Tasks: React.FC = () => {
                 tasks={assignmentsTasks}
                 showWhenEmpty={true}
               />
-              
+
               <TaskListSection
+                section="leftovers"
                 title="Left Over from Last Term"
                 subtitle="Finish these up!"
                 icon={getSectionIcon('leftovers')}
@@ -831,8 +903,9 @@ const Tasks: React.FC = () => {
                 tasks={leftoversTasks}
                 showWhenEmpty={true}
               />
-              
+
               <TaskListSection
+                section="experiments"
                 title="Experiments"
                 subtitle="Write these up!"
                 icon={getSectionIcon('experiments')}
@@ -840,8 +913,9 @@ const Tasks: React.FC = () => {
                 tasks={experimentsTasks}
                 showWhenEmpty={true}
               />
-              
+
               <TaskListSection
+                section="support"
                 title="Support & Activities"
                 subtitle="Stay motivated"
                 icon={getSectionIcon('support')}
@@ -850,7 +924,15 @@ const Tasks: React.FC = () => {
                 showWhenEmpty={true}
               />
             </div>
-          </div>
+            </div>
+          </DndContext>
+          <DragOverlay>
+            {activeDragTask ? (
+              <div className="opacity-90 rotate-1">
+                <TaskCard task={activeDragTask} showActions={false} />
+              </div>
+            ) : null}
+          </DragOverlay>
 
           {/* Progress Section */}
           <div className="progress-section">

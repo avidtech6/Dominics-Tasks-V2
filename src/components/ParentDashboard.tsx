@@ -57,6 +57,7 @@ const ParentDashboard: React.FC = () => {
   const [isRestoringTasks, setIsRestoringTasks] = useState(false);
   const [restoreSuccess, setRestoreSuccess] = useState<number | null>(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
 
   // Child form state
   const [newChildName, setNewChildName] = useState('');
@@ -113,10 +114,22 @@ const ParentDashboard: React.FC = () => {
     }
   };
 
+  // Load pending approvals (async — getPendingApprovals returns a Promise)
+  useEffect(() => {
+    let cancelled = false;
+    const loadApprovals = async () => {
+      const approvals = await taskBehaviour.getPendingApprovals();
+      if (!cancelled) setPendingApprovals(approvals || []);
+    };
+    loadApprovals();
+    const unsub = taskBehaviour.subscribe(() => { loadApprovals(); });
+    return () => { cancelled = true; unsub(); };
+  }, [taskBehaviour]);
+
   // Transform pending approvals for display
   const displayApprovals = useMemo(() => {
-    return transformApprovalsForDisplay(taskBehaviour.getPendingApprovals(), profiles as any[]);
-  }, [profiles, taskBehaviour]);
+    return transformApprovalsForDisplay(pendingApprovals, profiles as any[]);
+  }, [profiles, pendingApprovals]);
 
   // Handle add child
   const handleAddChild = async () => {
@@ -384,7 +397,7 @@ const ParentDashboard: React.FC = () => {
             </div>
 
             {/* Pending Approvals Preview */}
-            {taskBehaviour.getPendingApprovals().length > 0 && (
+            {pendingApprovals.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-gray-900">Pending Approvals</h2>

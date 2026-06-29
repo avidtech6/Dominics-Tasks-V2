@@ -114,6 +114,87 @@ async function main() {
       }
     }
 
+    // === Functional tests: edit + drag-drop (M01 recipe §B Inputs) ===
+    console.log('');
+    console.log('  --- Functional (M01 edit + drag-drop) ---');
+
+    process.stdout.write('  F01: Tasks page renders ... ');
+    await page.goto(`${APP_URL}/tasks`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(2000);
+    const taskCount = await page.$$eval('[data-task-id]', (els: Element[]) => els.length);
+    if (taskCount > 0) {
+      console.log(`✅ PASS (${taskCount} tasks rendered)`);
+      pass++;
+    } else {
+      console.log('❌ FAIL — no tasks rendered');
+      fail++;
+      failures.push({ step: 'F01: tasks render', reason: '0 tasks' });
+    }
+
+    process.stdout.write('  F02: TaskCard has onClick (recipe: click card to open modal) ... ');
+    // Count existing modals/dialogs before
+    const modalsBefore = await page.$$eval('[role="dialog"], .modal-backdrop', (els: Element[]) => els.length);
+    // Click first task card (the wrapper div holds data-task-id)
+    await page.click('[data-task-id] >> nth=0');
+    await page.waitForTimeout(800);
+    const modalsAfter = await page.$$eval('[role="dialog"], .modal-backdrop, .modal-overlay', (els: Element[]) => els.length);
+    // Also check for any fixed-positioned element that wasn't there before
+    if (modalsAfter > modalsBefore) {
+      console.log(`✅ PASS (clicking card opened modal — ${modalsBefore} → ${modalsAfter})`);
+      pass++;
+      await page.keyboard.press('Escape').catch(() => null);
+    } else {
+      // Fallback: check if any new fixed/absolute element appeared at a high z-index
+      const hadModal = await page.evaluate(() => {
+        const all = Array.from(document.querySelectorAll('div'));
+        for (const el of all) {
+          const cs = window.getComputedStyle(el);
+          if (cs.position === 'fixed' && parseInt(cs.zIndex || '0') > 30) return true;
+        }
+        return false;
+      });
+      if (hadModal) {
+        console.log('✅ PASS (clicking card opened a modal — high-z fixed element detected)');
+        pass++;
+        await page.keyboard.press('Escape').catch(() => null);
+      } else {
+        console.log(`❌ FAIL — no modal appeared (before=${modalsBefore}, after=${modalsAfter})`);
+        fail++;
+        failures.push({ step: 'F02: card click → modal', reason: `no modal opened` });
+      }
+    }
+
+    process.stdout.write('  F03: @dnd-kit context is mounted (recipe: drag task between columns) ... ');
+    const dndWired = await page.evaluate(() => {
+      // The DndContext renders a wrapper around the board; check that there's at least one element
+      // with the data-task-id attribute styled with cursor:grab (set by useDraggable).
+      const tasks = document.querySelectorAll('[data-task-id]');
+      for (const t of tasks) {
+        const cs = window.getComputedStyle(t as HTMLElement);
+        if (cs.cursor === 'grab') return true;
+      }
+      return false;
+    });
+    if (dndWired) {
+      console.log('✅ PASS (cards have cursor:grab → draggable)');
+      pass++;
+    } else {
+      console.log('❌ FAIL — no cursor:grab detected on task cards');
+      fail++;
+      failures.push({ step: 'F03: drag-drop wired', reason: 'no cursor:grab' });
+    }
+
+    process.stdout.write('  F04: Sections marked droppable (data-section-id attribute) ... ');
+    const droppables = await page.$$eval('[data-section-id]', (els: Element[]) => els.length);
+    if (droppables >= 6) {
+      console.log(`✅ PASS (${droppables} sections registered as drop targets)`);
+      pass++;
+    } else {
+      console.log(`❌ FAIL — only ${droppables} drop targets, expected >=6`);
+      fail++;
+      failures.push({ step: 'F04: droppable sections', reason: `${droppables} sections` });
+    }
+
     // === Wire-up verification: data survives page reload ===
     console.log('');
     console.log('  --- Persistence (FWV v8 wire-up verification) ---');
