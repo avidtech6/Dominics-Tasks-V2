@@ -14,6 +14,10 @@ import {
 import { useBehaviours } from '../orchestrator/AppOrchestrator';
 import TaskModal from '../components/TaskModal';
 import TaskCard from '../components/TaskCard';
+import DailyViewToggle, { DailyLens } from '../components/DailyViewToggle';
+import DailyViewFamily from '../components/DailyViewFamily';
+import { isParentUser } from '../components/LayoutBehaviour';
+import { activeTasks } from '../behaviours/CategoryLaneBehaviour';
 import { Task, TaskSection, TaskStatus, TaskPriority, TaskType, MirroredTask } from '../data/types';
 import { Plus, RefreshCw, Archive, RotateCcw, Trash, AlertTriangle, Settings, User, X } from 'lucide-react';
 import {
@@ -34,8 +38,20 @@ const isMirroredTask = (task: Task | MirroredTask): task is MirroredTask => {
 
 const Tasks: React.FC = () => {
   // Get behaviours from context
-  const { taskBehaviour, chatBehaviour } = useBehaviours();
+  const { taskBehaviour, chatBehaviour, authBehaviour } = useBehaviours();
   
+  // Adult-only daily view lens (M-Family-View extension)
+  const [lens, setLens] = useState<DailyLens>('dominic');
+  const [currentUser, setCurrentUser] = useState<{ role?: string } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    authBehaviour.getCurrentUser().then((u) => {
+      if (!cancelled) setCurrentUser(u as { role?: string });
+    });
+    return () => { cancelled = true; };
+  }, [authBehaviour]);
+  const isAdult = isParentUser(currentUser as any);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
@@ -700,6 +716,55 @@ const Tasks: React.FC = () => {
   const totalTasks = activeTasksCount + completedTasksCount;
   const progressPercentage = totalTasks > 0 ? (completedTasksCount / totalTasks) * 100 : 0;
 
+  // Adult-only Family View branch (renders BEFORE the existing daily JSX).
+  // Children (including Dominic) never reach this branch because isAdult is false.
+  if (isAdult && lens === 'family') {
+    const live = activeTasks(tasks);
+    return (
+      <div className="max-w-[1100px] mx-auto px-5 py-10" data-daily-lens="family">
+        {/* Restore Message */}
+        {restoreMessage && (
+          <div className={`restore-message ${
+            restoreMessage.includes('Successfully')
+              ? 'restore-message-success'
+              : 'restore-message-error'
+          }`}>
+            {restoreMessage}
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="text-center mb-4">
+          <h1 className="text-[2.2rem] font-bold text-[#2d3748] mb-2">Dominic's Tasks</h1>
+          <p className="text-[#718096] text-base">Take it one step at a time!</p>
+          <div className="date-badge">{formatDate(new Date())}</div>
+        </div>
+
+        {/* Adult-only lens toggle */}
+        <div className="flex justify-center mb-6">
+          <DailyViewToggle lens={lens} onChange={setLens} />
+        </div>
+
+        {/* Family View body */}
+        <DailyViewFamily
+          tasks={live}
+          day={new Date()}
+          onOpenTask={(t) => {
+            // Switch back to Dominic's lens so the existing edit modal (with
+            // its full form state) can open. No new modal wiring required.
+            setEditingTask(t);
+            setLens('dominic');
+          }}
+          onToggleComplete={(t) => taskBehaviour.completeTask(t.id).catch(() => null)}
+        />
+
+        {/* Modal mounts are handled by the existing daily-view branch below
+            (Add Modal + Edit Modal). We only open them here via setShowAddModal
+            / setEditingTask — no new modal wiring required for the family lens. */}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[1100px] mx-auto px-5 py-10">
       {/* Restore Message */}
@@ -719,6 +784,13 @@ const Tasks: React.FC = () => {
         <p className="text-[#718096] text-base">Take it one step at a time!</p>
         <div className="date-badge">{formatDate(new Date())}</div>
       </div>
+
+      {/* Adult-only lens toggle (only rendered for adult users) */}
+      {isAdult && (
+        <div className="flex justify-center mb-6">
+          <DailyViewToggle lens={lens} onChange={setLens} />
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="nav-tabs">
