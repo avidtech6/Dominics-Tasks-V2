@@ -132,12 +132,13 @@ async function main() {
     }
 
     process.stdout.write('  F02: TaskCard has onClick (recipe: click card to open modal) ... ');
-    // Count existing modals/dialogs before
-    const modalsBefore = await page.$$eval('[role="dialog"], .modal-backdrop', (els: Element[]) => els.length);
+    // Count existing fixed-overlay elements before
+    const modalsBefore = await page.$$eval('.fixed.inset-0, [role="dialog"]', (els: Element[]) => els.length);
     // Click first task card (the wrapper div holds data-task-id)
     await page.click('[data-task-id] >> nth=0');
     await page.waitForTimeout(800);
-    const modalsAfter = await page.$$eval('[role="dialog"], .modal-backdrop, .modal-overlay', (els: Element[]) => els.length);
+    // After click, count fixed overlays. TaskModal renders as .fixed.inset-0 backdrop.
+    const modalsAfter = await page.$$eval('.fixed.inset-0, [role="dialog"]', (els: Element[]) => els.length);
     // Close any modal that opened so subsequent steps start clean
     const closed = await page.evaluate(() => {
       // The TaskModal renders an X icon button in the modal header. Click the first svg button in the modal.
