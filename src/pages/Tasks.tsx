@@ -19,6 +19,9 @@ import DailyViewToggle, { DailyLens } from '../components/DailyViewToggle';
 import DailyViewFamily from '../components/DailyViewFamily';
 import { isParentUser } from '../components/LayoutBehaviour';
 import { activeTasks } from '../behaviours/CategoryLaneBehaviour';
+import { groupAssignmentsBySubject, syncChipsForLane } from '../behaviours/AssignmentSubjectBehaviour';
+import AssignmentChip from '../components/AssignmentChip';
+import AssignmentsGroupedSection from '../components/AssignmentsGroupedSection';
 import { Task, TaskSection, TaskStatus, TaskPriority, TaskType, MirroredTask } from '../data/types';
 import { Plus, RefreshCw, Archive, RotateCcw, Trash, AlertTriangle, Settings, User, X } from 'lucide-react';
 import {
@@ -89,6 +92,30 @@ const Tasks: React.FC = () => {
     const targetSection = rawOverId.slice('drop-'.length) as TaskSection;
     const task = tasks.find((t) => t.id === taskId);
     if (!task || task.section === targetSection) return;
+
+    // Sync semantics for assignments (operator directive 2026-07-01):
+    // When dragging an assignment onto a time-slot lane, do NOT move the task
+    // (it's still an assignment). Instead, append the destination lane to the
+    // task's `syncedTo` field — a sync chip appears in the destination lane.
+    // For non-assignment drags, keep existing behaviour (move the task).
+    const isAssignment = (task.section as string) === 'assignments';
+    const isTimeSlot = targetSection === 'morning' || targetSection === 'afternoon' || targetSection === 'catchup';
+    if (isAssignment && isTimeSlot) {
+      const currentSynced = ((task as any).syncedTo as string[] | undefined) ?? [];
+      if (currentSynced.includes(targetSection)) return; // already synced there
+      const nextSynced = [...currentSynced, targetSection];
+      // Optimistic
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, syncedTo: nextSynced } : t)));
+      try {
+        await taskBehaviour.updateTask(taskId, { syncedTo: nextSynced } as any);
+      } catch (err) {
+        console.error('[Tasks] sync updateTask failed:', err);
+        setTasks(taskBehaviour.getTasksSync());
+      }
+      return;
+    }
+
+    // Default: move the task between sections.
     // Optimistic update
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, section: targetSection } : t)));
     try {
@@ -333,10 +360,37 @@ const Tasks: React.FC = () => {
   const combinedMorningTasks = tasksBySection('morning');
   const combinedAfternoonTasks = tasksBySection('afternoon');
   const catchUpTasks = tasksBySection('catchup');
-  const assignmentsTasks = tasksBySection('assignments');
   const leftoversTasks = tasksBySection('leftovers');
   const experimentsTasks = tasksBySection('experiments');
   const supportTasks = tasksBySection('support');
+
+  // Assignments get type-grouped for the Assignments lane (subject → count → EP)
+  // and a per-task-list for any other rendering that still wants the flat list.
+  const allAssignments = tasksBySection('assignments');
+  const assignmentGroups = groupAssignmentsBySubject(allTasks);
+
+  // Sync chips for time-slot lanes: any assignment whose syncedTo includes
+  // this lane appears as a minimal chip at the top of the lane.
+  const morningSyncChips = allAssignments.filter((t) =>
+    ((t as any).syncedTo as string[] | undefined)?.includes('morning'),
+  );
+  const afternoonSyncChips = allAssignments.filter((t) =>
+    ((t as any).syncedTo as string[] | undefined)?.includes('afternoon'),
+  );
+  const morningSyncSummary = groupAssignmentsBySubject(morningSyncChips).map((g) => ({
+    subject: g.subject,
+    icon: g.icon,
+    count: g.tasks.length,
+    ep: g.ep,
+    tasks: g.tasks,
+  }));
+  const afternoonSyncSummary = groupAssignmentsBySubject(afternoonSyncChips).map((g) => ({
+    subject: g.subject,
+    icon: g.icon,
+    count: g.tasks.length,
+    ep: g.ep,
+    tasks: g.tasks,
+  }));
 
   // Mirrored: right-column tasks also surfaced in the left column
   // (purely UI duplication; the task's authoritative section stays as-is).
@@ -945,6 +999,30 @@ const Tasks: React.FC = () => {
                 showWhenEmpty={true}
               />
 
+              {/* Assignment sync chips — minimal references to assignments
+                  scheduled for morning. Rendered as a horizontal row inside
+                  the morning column (not in the lane itself). */}
+              {morningSyncSummary.length > 0 && (
+                <div
+                  className="mt-2 mb-4 flex flex-row flex-wrap gap-2"
+                  data-assignment-sync-row="morning"
+                >
+                  {morningSyncSummary.map((chip) => (
+                    <AssignmentChip
+                      key={chip.subject}
+                      subject={chip.subject}
+                      icon={chip.icon}
+                      count={chip.count}
+                      ep={chip.ep}
+                      taskIds={chip.tasks.map((t) => t.id)}
+                      tasks={chip.tasks}
+                      variant="sync"
+                      onOpenTask={setEditingTask}
+                    />
+                  ))}
+                </div>
+              )}
+
               <TaskListSection
                 section="afternoon"
                 title="This Afternoon"
@@ -954,6 +1032,28 @@ const Tasks: React.FC = () => {
                 tasks={combinedAfternoonTasks}
                 showWhenEmpty={true}
               />
+
+              {/* Assignment sync chips — afternoon */}
+              {afternoonSyncSummary.length > 0 && (
+                <div
+                  className="mt-2 mb-4 flex flex-row flex-wrap gap-2"
+                  data-assignment-sync-row="afternoon"
+                >
+                  {afternoonSyncSummary.map((chip) => (
+                    <AssignmentChip
+                      key={chip.subject}
+                      subject={chip.subject}
+                      icon={chip.icon}
+                      count={chip.count}
+                      ep={chip.ep}
+                      taskIds={chip.tasks.map((t) => t.id)}
+                      tasks={chip.tasks}
+                      variant="sync"
+                      onOpenTask={setEditingTask}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* NEW: Catch Up Section */}
               <TaskListSection
@@ -990,14 +1090,12 @@ const Tasks: React.FC = () => {
             <div>
               <h2 className="column-header column-header-purple">Other Activities</h2>
 
-              <TaskListSection
-                section="assignments"
-                title="Assignments Due"
-                subtitle="Don't forget!"
-                icon={getSectionIcon('assignments')}
-                iconClass="section-icon-assignments"
-                tasks={assignmentsTasks}
-                showWhenEmpty={true}
+              {/* Assignments section — type-grouped minimal cards.
+                Per operator directive 2026-07-01: don't show full task cards,
+                show subject-grouped reference chips instead. */}
+              <AssignmentsGroupedSection
+                groups={assignmentGroups}
+                onOpenFirst={(tasks) => setEditingTask(tasks[0])}
               />
 
               <TaskListSection

@@ -53,6 +53,13 @@ export interface Task {
   deadlineDate?: Date;
   pointsValue?: number;
   commentCount?: number;
+  /**
+   * Synced lanes — when this task is in section='assignments' but the user has
+   * dragged it onto a time-slot lane, the lane name goes here. The task stays
+   * in assignments; the destination lane gets a sync chip showing the task.
+   * Optional + additive — older tasks / fixtures without this field are fine.
+   */
+  syncedTo?: string[];
 }
 
 export interface TaskComment {
