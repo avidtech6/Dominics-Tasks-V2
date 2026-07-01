@@ -433,21 +433,45 @@ body {
   cursor: grabbing;
 }
 
-/* Drop target styling — subtle inner glow + thin top accent.
-   The section already has its own border/radius from .task-section,
-   so we don't draw a chunky outer border. Instead: a 2px top accent line
-   + a soft inner glow + a very subtle bg tint. ADHD-friendly.
-   180ms fade. */
+/* Drop target styling — minimal, edge-only.
+   Real apps (Trello, Linear) don't paint the whole section. They show
+   a 2px colored line at the insertion point. The card the user is
+   dragging (DragOverlay) is the primary visual cue.
+   120ms fade. */
 .task-section.drop-target {
-  background: rgba(219, 234, 254, 0.35);          /* blue-100 at 35% — subtle wash */
-  box-shadow: inset 0 2px 0 0 #3b82f6,            /* 2px top accent line */
-              inset 0 0 0 1px rgba(59, 130, 246, 0.18); /* 1px inner outline */
-  transition: background-color 180ms ease-out,
-              box-shadow 180ms ease-out;
+  /* No background change. No chunky box-shadow. */
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  transition: none;
 }
 
 .task-section.drop-target .section-header {
-  border-bottom-color: rgba(59, 130, 246, 0.30);
+  border-bottom-color: transparent;
+}
+
+/* Drop indicator: a 2px blue line rendered at the lane's bottom edge
+   (where the dropped card will land if the lane is empty, OR at the
+   drop-slot if it has cards). Replaces the old 'whole-section wash'. */
+.task-section.drop-target {
+  position: relative;
+}
+
+.task-section.drop-target::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #3b82f6;
+  border-radius: 999px;
+  animation: drop-glow 1200ms ease-in-out infinite alternate;
+}
+
+@keyframes drop-glow {
+  from { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.0); }
+  to   { box-shadow: 0 0 8px 0 rgba(59, 130, 246, 0.5); }
 }
 
 /* NEW: Mirrored task styling */
