@@ -989,6 +989,30 @@ const Tasks: React.FC = () => {
             <div>
               <h2 className="column-header column-header-amber">Today's Focus</h2>
               
+              {/* Assignment sync chips — placed BEFORE each time-slot lane so they
+                  appear at the top of the morning/afternoon column as a
+                  "scheduled for this slot" hint. */}
+              {morningSyncSummary.length > 0 && (
+                <div
+                  className="mt-2 mb-4 flex flex-row flex-wrap gap-2"
+                  data-assignment-sync-row="morning"
+                >
+                  {morningSyncSummary.map((chip) => (
+                    <AssignmentChip
+                      key={chip.subject}
+                      subject={chip.subject}
+                      icon={chip.icon}
+                      count={chip.count}
+                      ep={chip.ep}
+                      taskIds={chip.tasks.map((t) => t.id)}
+                      tasks={chip.tasks}
+                      variant="sync"
+                      onOpenTask={setEditingTask}
+                    />
+                  ))}
+                </div>
+              )}
+
               <TaskListSection
                 section="morning"
                 title="This Morning"
@@ -999,15 +1023,12 @@ const Tasks: React.FC = () => {
                 showWhenEmpty={true}
               />
 
-              {/* Assignment sync chips — minimal references to assignments
-                  scheduled for morning. Rendered as a horizontal row inside
-                  the morning column (not in the lane itself). */}
-              {morningSyncSummary.length > 0 && (
+              {afternoonSyncSummary.length > 0 && (
                 <div
                   className="mt-2 mb-4 flex flex-row flex-wrap gap-2"
-                  data-assignment-sync-row="morning"
+                  data-assignment-sync-row="afternoon"
                 >
-                  {morningSyncSummary.map((chip) => (
+                  {afternoonSyncSummary.map((chip) => (
                     <AssignmentChip
                       key={chip.subject}
                       subject={chip.subject}
@@ -1032,28 +1053,6 @@ const Tasks: React.FC = () => {
                 tasks={combinedAfternoonTasks}
                 showWhenEmpty={true}
               />
-
-              {/* Assignment sync chips — afternoon */}
-              {afternoonSyncSummary.length > 0 && (
-                <div
-                  className="mt-2 mb-4 flex flex-row flex-wrap gap-2"
-                  data-assignment-sync-row="afternoon"
-                >
-                  {afternoonSyncSummary.map((chip) => (
-                    <AssignmentChip
-                      key={chip.subject}
-                      subject={chip.subject}
-                      icon={chip.icon}
-                      count={chip.count}
-                      ep={chip.ep}
-                      taskIds={chip.tasks.map((t) => t.id)}
-                      tasks={chip.tasks}
-                      variant="sync"
-                      onOpenTask={setEditingTask}
-                    />
-                  ))}
-                </div>
-              )}
 
               {/* NEW: Catch Up Section */}
               <TaskListSection
