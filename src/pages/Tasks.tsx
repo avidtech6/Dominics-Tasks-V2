@@ -82,7 +82,11 @@ const Tasks: React.FC = () => {
     const { active, over } = event;
     if (!over) return;
     const taskId = String(active.id);
-    const targetSection = String(over.id) as TaskSection;
+    // Droppable ids are namespaced as `drop-<section>` (see TaskListSection).
+    // Mirror sections use `droppable={false}` so they're excluded automatically.
+    const rawOverId = String(over.id);
+    if (!rawOverId.startsWith('drop-')) return;
+    const targetSection = rawOverId.slice('drop-'.length) as TaskSection;
     const task = tasks.find((t) => t.id === taskId);
     if (!task || task.section === targetSection) return;
     // Optimistic update
@@ -315,46 +319,35 @@ const Tasks: React.FC = () => {
 
   
 
-  // Organize tasks by section - show ALL tasks including completed ones on main page
-  // Only hide tasks that are soft-deleted (in trash)
+  // Section-filtered logic (per operator directive 2026-07-01):
+  //   Each lane shows tasks WHERE task.section === lane.section.
+  //   No deadline-based or status-based filters at the lane level.
+  //   Overdue / yesterday flags become badges (see TaskCard), not filters.
+  //   This guarantees that a task dropped into a section always appears there.
   const allTasks = tasks.filter((t) => !t.deletedAt);
-  const todayTasks = allTasks.filter((t) => t.status === 'today' || t.status === 'done');
-  const todoTasks = allTasks.filter((t) => t.status === 'todo' || t.status === 'done');
 
-  // Active tasks (not done) - include both 'today' and 'todo' status for morning/afternoon sections
-  const morningTasks = todayTasks.filter((t) => t.section === 'morning');
-  const afternoonTasks = todayTasks.filter((t) => t.section === 'afternoon');
-  
-  // Also include todo tasks in morning/afternoon sections
-  const morningTodoTasks = allTasks.filter((t) => t.section === 'morning' && t.status === 'todo');
-  const afternoonTodoTasks = allTasks.filter((t) => t.section === 'afternoon' && t.status === 'todo');
-  
-  // Combine today and todo tasks for morning/afternoon sections
-  const combinedMorningTasks = [...morningTasks, ...morningTodoTasks];
-  const combinedAfternoonTasks = [...afternoonTasks, ...afternoonTodoTasks];
+  // Helper: every section lane groups purely by section name.
+  const tasksBySection = (section: string) =>
+    allTasks.filter((t) => (t.section as string) === section);
 
-  // NEW: Catch Up section - tasks that need to be shored up from yesterday or before
-  const catchUpTasks = allTasks.filter((t) =>
-    t.status !== 'done' &&
-    !t.deletedAt &&
-    (needsCatchUp(t.deadlineDate) || isFromYesterday(t.dueDate || t.createdAt))
+  const combinedMorningTasks = tasksBySection('morning');
+  const combinedAfternoonTasks = tasksBySection('afternoon');
+  const catchUpTasks = tasksBySection('catchup');
+  const assignmentsTasks = tasksBySection('assignments');
+  const leftoversTasks = tasksBySection('leftovers');
+  const experimentsTasks = tasksBySection('experiments');
+  const supportTasks = tasksBySection('support');
+
+  // Mirrored: right-column tasks also surfaced in the left column
+  // (purely UI duplication; the task's authoritative section stays as-is).
+  const rightColumnTasks = allTasks.filter((t) =>
+    ['assignments', 'leftovers', 'experiments', 'support'].includes(t.section as string),
   );
-
-  // NEW: Get mirrored tasks from right column sections that have today's date
-  const rightColumnTasks = todoTasks.filter((t) => 
-    ['assignments', 'leftovers', 'experiments', 'support'].includes(t.section)
-  );
-  
   const mirroredTasksMorning: MirroredTask[] = getMirroredTasksForToday(rightColumnTasks).map((task: any) => ({
     ...task,
     isMirrored: true,
-    originalSection: task.section
+    originalSection: task.section,
   }));
-
-  const assignmentsTasks = todoTasks.filter((t) => t.section === 'assignments');
-  const leftoversTasks = todoTasks.filter((t) => t.section === 'leftovers');
-  const experimentsTasks = todoTasks.filter((t) => t.section === 'experiments');
-  const supportTasks = todoTasks.filter((t) => t.section === 'support');
 
   // History tasks (archived)
   const historyTasks = tasks.filter((t) => t.archivedAt && !t.deletedAt);
@@ -464,11 +457,17 @@ const Tasks: React.FC = () => {
     tasks: (Task | MirroredTask)[];
     showWhenEmpty?: boolean;
     section: TaskSection;
-  }> = ({ title, subtitle, icon, iconClass, tasks, showWhenEmpty = false, section }) => {
+    /** When false, this lane is decorative (e.g. a mirrored section). */
+    droppable?: boolean;
+  }> = ({ title, subtitle, icon, iconClass, tasks, showWhenEmpty = false, section, droppable = true }) => {
     // Don't render anything if no tasks and not forcing show
     if (tasks.length === 0 && !showWhenEmpty) return null;
 
-    const { setNodeRef, isOver } = useDroppable({ id: section });
+    // useDroppable must always be called (hook order), but only register when needed.
+    const { setNodeRef, isOver } = useDroppable({
+      id: `drop-${section}`,
+      disabled: !droppable,
+    });
 
     return (
       <div
@@ -963,6 +962,7 @@ const Tasks: React.FC = () => {
                   </div>
                   <TaskListSection
                     section="morning"
+                    droppable={false}
                     title="Today's Assignments & Tasks"
                     subtitle="Due today - also in focus"
                     icon={<RotateCcw size={18} />}
@@ -1019,9 +1019,17 @@ const Tasks: React.FC = () => {
             </div>
             </div>
           </DndContext>
-          <DragOverlay>
+          <DragOverlay dropAnimation={null}>
             {activeDragTask ? (
-              <div className="opacity-90 rotate-1">
+              <div
+                className="drag-overlay-card"
+                style={{
+                  width: 460,
+                  cursor: 'grabbing',
+                  transform: 'rotate(-2deg)',
+                  filter: 'drop-shadow(0 12px 20px rgba(15, 23, 42, 0.25))',
+                }}
+              >
                 <TaskCard task={activeDragTask} showActions={false} />
               </div>
             ) : null}

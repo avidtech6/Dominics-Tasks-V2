@@ -433,17 +433,20 @@ body {
   cursor: grabbing;
 }
 
-/* Drop target styling */
+/* Drop target styling — subtle blue tint per ADHD-friendly palette.
+   Fades in 150ms (Tailwind transition handles the rest). */
 .task-section.drop-target {
-  background: #fef3c7;
-  border: 2px dashed #f59e0b;
+  background: rgba(219, 234, 254, 0.55); /* blue-100 at ~55% opacity */
+  border: 2px dashed #3b82f6;             /* blue-500 */
   border-radius: 12px;
   padding: 8px;
   margin: 8px 0;
+  transition: background-color 180ms ease-out, border-color 180ms ease-out;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.10);
 }
 
 .task-section.drop-target .section-header {
-  border-bottom-color: #f59e0b;
+  border-bottom-color: #3b82f6;
 }
 
 /* NEW: Mirrored task styling */
