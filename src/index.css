@@ -433,20 +433,21 @@ body {
   cursor: grabbing;
 }
 
-/* Drop target styling — subtle blue tint per ADHD-friendly palette.
-   Fades in 150ms (Tailwind transition handles the rest). */
+/* Drop target styling — subtle inner glow + thin top accent.
+   The section already has its own border/radius from .task-section,
+   so we don't draw a chunky outer border. Instead: a 2px top accent line
+   + a soft inner glow + a very subtle bg tint. ADHD-friendly.
+   180ms fade. */
 .task-section.drop-target {
-  background: rgba(219, 234, 254, 0.55); /* blue-100 at ~55% opacity */
-  border: 2px dashed #3b82f6;             /* blue-500 */
-  border-radius: 12px;
-  padding: 8px;
-  margin: 8px 0;
-  transition: background-color 180ms ease-out, border-color 180ms ease-out;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.10);
+  background: rgba(219, 234, 254, 0.35);          /* blue-100 at 35% — subtle wash */
+  box-shadow: inset 0 2px 0 0 #3b82f6,            /* 2px top accent line */
+              inset 0 0 0 1px rgba(59, 130, 246, 0.18); /* 1px inner outline */
+  transition: background-color 180ms ease-out,
+              box-shadow 180ms ease-out;
 }
 
 .task-section.drop-target .section-header {
-  border-bottom-color: #3b82f6;
+  border-bottom-color: rgba(59, 130, 246, 0.30);
 }
 
 /* NEW: Mirrored task styling */

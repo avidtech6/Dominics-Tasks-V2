@@ -485,9 +485,9 @@ const Tasks: React.FC = () => {
         {tasks.length > 0 ? (
           <div className="task-cards-container">
             {tasks.map((task, index) => (
-              <TaskCardWrapper 
-                key={task.id} 
-                task={task} 
+              <TaskCardWrapper
+                key={task.id}
+                task={task}
                 isMirrored={isMirroredTask(task)}
                 index={index}
               />
@@ -498,6 +498,19 @@ const Tasks: React.FC = () => {
             <span className="empty-icon">✨</span>
             <span>All caught up!</span>
           </div>
+        )}
+        {/* Drop slot — only visible while this lane is the active drop target.
+            Subtle dashed pill at the lane tail shows where the card will land. */}
+        {droppable && (
+          <div
+            data-drop-slot={section}
+            aria-hidden="true"
+            className={`mt-2 h-1.5 rounded-full transition-all duration-150 ${
+              isOver
+                ? 'h-2.5 bg-blue-500/30 border border-dashed border-blue-500'
+                : 'bg-transparent border border-transparent'
+            }`}
+          />
         )}
       </div>
     );
