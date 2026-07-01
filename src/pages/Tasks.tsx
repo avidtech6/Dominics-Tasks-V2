@@ -1128,22 +1128,23 @@ const Tasks: React.FC = () => {
               />
             </div>
             </div>
+            <DragOverlay dropAnimation={null}>
+              {activeDragTask ? (
+                <div
+                  className="drag-overlay-card"
+                  data-drag-overlay="true"
+                  style={{
+                    width: 460,
+                    cursor: 'grabbing',
+                    transform: 'rotate(-2deg)',
+                    filter: 'drop-shadow(0 12px 20px rgba(15, 23, 42, 0.25))',
+                  }}
+                >
+                  <TaskCard task={activeDragTask} showActions={false} />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
-          <DragOverlay dropAnimation={null}>
-            {activeDragTask ? (
-              <div
-                className="drag-overlay-card"
-                style={{
-                  width: 460,
-                  cursor: 'grabbing',
-                  transform: 'rotate(-2deg)',
-                  filter: 'drop-shadow(0 12px 20px rgba(15, 23, 42, 0.25))',
-                }}
-              >
-                <TaskCard task={activeDragTask} showActions={false} />
-              </div>
-            ) : null}
-          </DragOverlay>
 
           {/* Progress Section */}
           <div className="progress-section">
